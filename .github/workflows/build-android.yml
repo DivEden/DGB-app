@@ -201,14 +201,28 @@ jobs:
         echo "Buildozer exit code: $BUILD_EXIT_CODE"
         
         if [ $BUILD_EXIT_CODE -ne 0 ]; then
-          echo "=== BUILD FAILED - Last 100 lines of build log ==="
-          tail -n 100 buildozer.log || echo "Could not read buildozer.log"
+          echo "=== BUILD FAILED - Detailed Error Analysis ==="
           
-          echo "=== Searching for specific error patterns ==="
-          grep -i "error\|failed\|exception\|traceback" buildozer.log | tail -n 20 || echo "No specific error patterns found"
+          echo "=== Last 50 lines of buildozer.log ==="
+          tail -n 50 buildozer.log || echo "Could not read buildozer.log"
           
-          echo "=== Python for Android (p4a) logs ==="
-          find ~/.buildozer -name "*.log" -type f -exec echo "=== {} ===" \; -exec tail -n 20 {} \; 2>/dev/null || echo "No p4a logs found"
+          echo "=== Python-for-Android build logs ==="
+          find ~/.buildozer -name "*.log" -type f -print0 | while IFS= read -r -d '' logfile; do
+            echo "=== Log file: $logfile ==="
+            tail -n 20 "$logfile" 2>/dev/null || echo "Could not read $logfile"
+          done
+          
+          echo "=== Searching for compilation errors ==="
+          grep -i -A 5 -B 5 "error\|failed\|exception\|traceback\|fatal\|cannot find" buildozer.log | tail -n 30 || echo "No specific error patterns found"
+          
+          echo "=== P4A build directory contents ==="
+          find ~/.buildozer/android/platform/build-* -name "*.log" -type f 2>/dev/null | head -5 | while read logfile; do
+            echo "=== P4A log: $logfile ==="
+            tail -n 15 "$logfile" 2>/dev/null || echo "Could not read $logfile"
+          done
+          
+          echo "=== Disk space check ==="
+          df -h || echo "Could not check disk space"
           
           exit $BUILD_EXIT_CODE
         fi

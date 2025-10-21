@@ -37,7 +37,7 @@ version = 0.1
 
 # (list) Application requirements
 # comma separated e.g. requirements = sqlite3,kivy
-requirements = python3,kivy==2.1.0,requests,lxml,urllib3,certifi,pillow
+requirements = python3,kivy==2.1.0,requests,lxml,urllib3,certifi
 
 # (str) Custom source folders for requirements
 # Sets custom source for any requirements with recipes
@@ -148,6 +148,45 @@ android.accept_sdk_license = True
 # (str) Full name including package path of the Java class that implements Android Activity
 # use that parameter together with android.entrypoint to set custom Java class instead of PythonActivity
 #android.activity_class_name = org.kivy.android.PythonActivity
+
+# (str) python-for-android fork to use, defaults to upstream (kivy)
+#p4a.fork = kivy
+
+# (str) python-for-android branch to use, defaults to master
+#p4a.branch = master
+
+# (str) python-for-android specific commit to use, defaults to HEAD, must be within p4a.branch
+#p4a.commit = HEAD
+
+# (str) python-for-android git clone directory (if empty, it will be automatically cloned from github)
+#p4a.source_dir =
+
+# (str) The directory in which python-for-android should look for your own build recipes (if any)
+#p4a.local_recipes =
+
+# (list) python-for-android whitelist of arches to build for by default. E.g. armeabi-v7a, arm64-v8a, x86, x86_64
+# In general, i386 for x86, arm64 for arm64-v8a or aarch64, arm for arm32 or armeabi-v7a
+# android.archs = arm64-v8a, armeabi-v7a
+android.archs = arm64-v8a
+
+# (bool) enables Android auto backup feature (Android API >=23)
+android.allow_backup = True
+
+# (str) XML file for Android Auto Backup (https://developer.android.com/guide/topics/data/autobackup)
+# android.backup_rules =
+
+# (str) If you need to insert variables into your AndroidManifest.xml file,
+# you can do so with the manifestPlaceholders property.
+# This property takes a map of key-value pairs. (via a string)
+# Usage example : android.manifest_placeholders = key:value, key2:value2
+# android.manifest_placeholders = [:]
+
+# (bool) Copy library instead of making a libpymodules.so
+#android.copy_libs = 1
+
+# (list) The Android archs to build for, choices: armeabi-v7a, arm64-v8a, x86, x86_64
+# In past, was `android.arch` as we weren't supporting builds for multiple archs at the same time.
+#android.archs = arm64-v8a, armeabi-v7a
 
 # (str) Extra xml to write directly inside the <manifest> element of AndroidManifest.xml
 # use that parameter to provide a filename from where to load your custom XML code
