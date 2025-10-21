@@ -70,7 +70,14 @@ jobs:
         
     - name: Accept Android licenses
       run: |
-        yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses || true
+        # Accept all licenses automatically
+        yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses
+        
+        # Install specific build tools we need
+        $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager "build-tools;31.0.0"
+        
+        # Verify installation
+        ls -la $ANDROID_SDK_ROOT/build-tools/ || echo "Build tools not found"
         
     - name: Cache buildozer dependencies
       uses: actions/cache@v4
@@ -98,10 +105,14 @@ jobs:
         echo "Android SDK Root: $ANDROID_SDK_ROOT"
         echo "Android Home: $ANDROID_HOME" 
         echo "Android NDK: $ANDROID_NDK_ROOT"
-        echo "PATH: $PATH"
         
         # Verify SDK installation
         ls -la $ANDROID_SDK_ROOT/ || echo "SDK directory not found"
+        ls -la $ANDROID_SDK_ROOT/build-tools/ || echo "Build tools directory not found"
+        
+        # Set buildozer to use system Android SDK
+        export P4A_ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT
+        export P4A_ANDROID_NDK_ROOT=$ANDROID_NDK_ROOT
         
         # Build the APK with verbose output
         buildozer -v android debug
