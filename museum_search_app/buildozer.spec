@@ -346,7 +346,7 @@ android.allow_backup = True
 # android.numeric_version = 1
 
 # (bool) enables Android auto backup feature (Android API >=23)
-android.allow_backup = True
+# android.allow_backup = True (duplicate removed - see line 186)
 
 # (str) XML file for custom backup rules (see official auto backup documentation)
 # android.backup_rules =
