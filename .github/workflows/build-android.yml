@@ -70,14 +70,21 @@ jobs:
         
     - name: Accept Android licenses
       run: |
-        # Accept all licenses automatically
-        yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses
+        # Pre-accept all licenses by writing them directly
+        mkdir -p $ANDROID_SDK_ROOT/licenses
+        echo "d56f5187479451eabf01fb78af6dfcb131a6481e" > $ANDROID_SDK_ROOT/licenses/android-sdk-license
+        echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > $ANDROID_SDK_ROOT/licenses/android-sdk-preview-license
+        echo "84831b9409646a918e30573bab4c9c91346d8abd" > $ANDROID_SDK_ROOT/licenses/android-googletv-license
+        echo "d975f751698a77b662f1254ddbeed3901e976f5a" > $ANDROID_SDK_ROOT/licenses/intel-android-extra-license
+        echo "33b6a2b64607f11b759f320ef9dff4ae5c47d97a" > $ANDROID_SDK_ROOT/licenses/google-gdk-license
         
-        # Install specific build tools we need
+        # Install the specific build tools version we need
         $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager "build-tools;31.0.0"
         
         # Verify installation
+        echo "Checking build tools installation:"
         ls -la $ANDROID_SDK_ROOT/build-tools/ || echo "Build tools not found"
+        ls -la $ANDROID_SDK_ROOT/build-tools/31.0.0/ || echo "Build tools 31.0.0 not found"
         
     - name: Cache buildozer dependencies
       uses: actions/cache@v4
@@ -96,6 +103,10 @@ jobs:
         ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
         ANDROID_HOME: ${{ env.ANDROID_HOME }}
         ANDROID_NDK_ROOT: ${{ env.ANDROID_NDK_ROOT }}
+        P4A_ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
+        P4A_ANDROID_NDK_ROOT: ${{ env.ANDROID_NDK_ROOT }}
+        BUILDOZER_ANDROID_SDK_PATH: ${{ env.ANDROID_SDK_ROOT }}
+        BUILDOZER_ANDROID_NDK_PATH: ${{ env.ANDROID_NDK_ROOT }}
       run: |
         # Make sure we're in the right directory
         pwd
@@ -107,12 +118,16 @@ jobs:
         echo "Android NDK: $ANDROID_NDK_ROOT"
         
         # Verify SDK installation
+        echo "SDK directory contents:"
         ls -la $ANDROID_SDK_ROOT/ || echo "SDK directory not found"
+        echo "Build tools directory contents:"
         ls -la $ANDROID_SDK_ROOT/build-tools/ || echo "Build tools directory not found"
+        echo "Specific build tools 31.0.0:"
+        ls -la $ANDROID_SDK_ROOT/build-tools/31.0.0/ || echo "Build tools 31.0.0 not found"
         
-        # Set buildozer to use system Android SDK
-        export P4A_ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT
-        export P4A_ANDROID_NDK_ROOT=$ANDROID_NDK_ROOT
+        # Verify aidl tool exists
+        echo "Checking for aidl:"
+        ls -la $ANDROID_SDK_ROOT/build-tools/31.0.0/aidl || echo "aidl not found"
         
         # Build the APK with verbose output
         buildozer -v android debug
