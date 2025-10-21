@@ -62,28 +62,15 @@ jobs:
         pip install buildozer cython==0.29.36 python-for-android
         
     - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+      with:
+        api-level: 31
+        build-tools: 31.0.0
+        ndk: 25.2.9519653
+        
+    - name: Accept Android licenses
       run: |
-        # Download Android command line tools
-        mkdir -p ~/.buildozer/android/platform
-        cd ~/.buildozer/android/platform
-        
-        # Download the latest command line tools
-        wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-        unzip -q commandlinetools-linux-11076708_latest.zip
-        mkdir -p android-sdk/cmdline-tools
-        mv cmdline-tools android-sdk/cmdline-tools/latest
-        
-        # Set up SDK environment
-        export ANDROID_SDK_ROOT=$HOME/.buildozer/android/platform/android-sdk
-        export PATH=$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools
-        
-        # Accept licenses
-        mkdir -p $ANDROID_SDK_ROOT/licenses
-        echo "d56f5187479451eabf01fb78af6dfcb131a6481e" > $ANDROID_SDK_ROOT/licenses/android-sdk-license
-        echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > $ANDROID_SDK_ROOT/licenses/android-sdk-preview-license
-        
-        # Install required SDK components
-        yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_SDK_ROOT "platform-tools" "build-tools;31.0.0" "platforms;android-31"
+        yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses || true
         
     - name: Cache buildozer dependencies
       uses: actions/cache@v4
@@ -99,21 +86,22 @@ jobs:
     - name: Build Android APK
       working-directory: ./museum_search_app
       env:
-        ANDROID_SDK_ROOT: /home/runner/.buildozer/android/platform/android-sdk
-        ANDROID_HOME: /home/runner/.buildozer/android/platform/android-sdk
+        ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
+        ANDROID_HOME: ${{ env.ANDROID_HOME }}
+        ANDROID_NDK_ROOT: ${{ env.ANDROID_NDK_ROOT }}
       run: |
         # Make sure we're in the right directory
         pwd
         ls -la
         
-        # Verify Android SDK setup
-        export PATH=$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools
+        # Show Android SDK setup
         echo "Android SDK Root: $ANDROID_SDK_ROOT"
+        echo "Android Home: $ANDROID_HOME" 
+        echo "Android NDK: $ANDROID_NDK_ROOT"
         echo "PATH: $PATH"
-        ls -la $ANDROID_SDK_ROOT/ || echo "SDK directory not found"
         
-        # Clean any previous build attempts
-        buildozer android clean || true
+        # Verify SDK installation
+        ls -la $ANDROID_SDK_ROOT/ || echo "SDK directory not found"
         
         # Build the APK with verbose output
         buildozer -v android debug
