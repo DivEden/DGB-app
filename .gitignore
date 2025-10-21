@@ -1,0 +1,26 @@
+# Buildozer cache
+.buildozer/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environment  
+venv/
+env/
+
+# Temporary files
+*.tmp
+*.log
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# APK output (will be in GitHub Actions artifacts instead)
+*.apk
