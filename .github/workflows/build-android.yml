@@ -181,8 +181,39 @@ jobs:
         echo "Checking main.py exists:"
         test -f main.py && echo "main.py found" || { echo "ERROR: main.py not found"; exit 1; }
         
+        echo "=== Python Environment Check ==="
+        python3 --version
+        pip3 list | grep -E "(kivy|requests|lxml|urllib3|certifi|pillow)" || echo "Some required packages may be missing"
+        
+        echo "=== Buildozer Version ==="
+        buildozer version || echo "Could not get buildozer version"
+        
         echo "=== Starting Build Process ==="
-        buildozer -v android debug
+        # Set buildozer log level to 2 for detailed debugging
+        export BUILDOZER_LOG_LEVEL=2
+        
+        # Run buildozer with maximum verbosity and capture all output
+        echo "Running buildozer with detailed logging..."
+        buildozer --verbose android debug 2>&1 | tee buildozer.log
+        
+        # Check if build was successful
+        BUILD_EXIT_CODE=${PIPESTATUS[0]}
+        echo "Buildozer exit code: $BUILD_EXIT_CODE"
+        
+        if [ $BUILD_EXIT_CODE -ne 0 ]; then
+          echo "=== BUILD FAILED - Last 100 lines of build log ==="
+          tail -n 100 buildozer.log || echo "Could not read buildozer.log"
+          
+          echo "=== Searching for specific error patterns ==="
+          grep -i "error\|failed\|exception\|traceback" buildozer.log | tail -n 20 || echo "No specific error patterns found"
+          
+          echo "=== Python for Android (p4a) logs ==="
+          find ~/.buildozer -name "*.log" -type f -exec echo "=== {} ===" \; -exec tail -n 20 {} \; 2>/dev/null || echo "No p4a logs found"
+          
+          exit $BUILD_EXIT_CODE
+        fi
+        
+        echo "Build completed successfully!"
         
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4
