@@ -37,7 +37,7 @@ version = 0.1
 
 # (list) Application requirements
 # comma separated e.g. requirements = sqlite3,kivy
-requirements = python3,kivy==2.1.0,requests,lxml,urllib3,certifi
+requirements = python3==3.11.13,kivy==2.1.0,requests,urllib3,certifi
 
 # (str) Custom source folders for requirements
 # Sets custom source for any requirements with recipes
@@ -140,6 +140,19 @@ android.skip_update = True
 # the default, you will be shown the license when first running
 # buildozer.
 android.accept_sdk_license = True
+
+# (str) Bootstrap to use for creating the application
+# p4a supports sdl2, webview, service_library bootstraps.
+android.bootstrap = sdl2
+
+# (bool) Enable AndroidX support library.
+android.enable_androidx = True
+
+# (str) python-for-android fork to use, defaults to upstream (kivy)
+#p4a.fork = kivy
+
+# (str) python-for-android branch to use, defaults to master
+#p4a.branch = master
 # android.accept_sdk_license = False
 
 # (str) Android entry point, default is ok for Kivy-based app
