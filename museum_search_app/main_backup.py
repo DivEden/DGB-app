@@ -39,7 +39,10 @@ class SearchScreen(Screen):
         self.api = SaraAPI()
         self.recent_searches = []
         self.recent_searches_file = "recent_searches.json"
+        self.saved_searches = []
+        self.saved_searches_file = "saved_searches.json"
         self.load_recent_searches()
+        self.load_saved_searches()
         self.build_screen()
     
     def load_recent_searches(self):
@@ -59,6 +62,64 @@ class SearchScreen(Screen):
                 json.dump(self.recent_searches, f, ensure_ascii=False, indent=2)
         except Exception as e:
             print(f"Fejl ved gemning af seneste søgninger: {e}")
+    
+    def load_saved_searches(self):
+        """Indlæs gemte søgninger fra fil"""
+        try:
+            if os.path.exists(self.saved_searches_file):
+                with open(self.saved_searches_file, 'r', encoding='utf-8') as f:
+                    self.saved_searches = json.load(f)
+        except Exception as e:
+            print(f"Fejl ved indlæsning af gemte søgninger: {e}")
+            self.saved_searches = []
+    
+    def save_saved_searches(self):
+        """Gem gemte søgninger til fil"""
+        try:
+            with open(self.saved_searches_file, 'w', encoding='utf-8') as f:
+                json.dump(self.saved_searches, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            print(f"Fejl ved gemning af gemte søgninger: {e}")
+    
+    def add_to_saved_searches(self, obj):
+        """Tilføj objekt til gemte søgninger"""
+        obj_number = obj.get('objectNumber', obj.get('NB', ''))
+        
+        # Tjek om det allerede er gemt
+        for item in self.saved_searches:
+            if item.get('objectNumber', item.get('NB', '')) == obj_number:
+                return False  # Allerede gemt
+        
+        # Tilføj til gemte
+        search_item = {
+            'title': obj.get('title', obj.get('TI', 'Ingen titel')),
+            'objectNumber': obj_number,
+            'primaryImage': obj.get('primaryImage', ''),
+            'hasImage': obj.get('hasImage', False),
+            'timestamp': Clock.get_time()
+        }
+        
+        self.saved_searches.insert(0, search_item)
+        self.save_saved_searches()
+        return True  # Successfuldt gemt
+    
+    def remove_from_saved_searches(self, obj_number):
+        """Fjern objekt fra gemte søgninger"""
+        self.saved_searches = [item for item in self.saved_searches 
+                              if item.get('objectNumber', item.get('NB', '')) != obj_number]
+        self.save_saved_searches()
+        
+        # Opdater gemte skærm hvis den er åben
+        if self.manager and self.manager.has_screen('saved'):
+            saved_screen = self.manager.get_screen('saved')
+            saved_screen.update_saved_carousel()
+    
+    def is_saved(self, obj_number):
+        """Tjek om objekt er gemt"""
+        for item in self.saved_searches:
+            if item.get('objectNumber', item.get('NB', '')) == obj_number:
+                return True
+        return False
     
     def add_to_recent_searches(self, obj):
         """Add object to recent searches"""
@@ -100,61 +161,144 @@ class SearchScreen(Screen):
         self.update_recent_carousel()
     
     def build_screen(self):
-        """Byg søge interfacet med flot navy blå design"""
-        # Hovedlayout med gradient baggrund
+        """Byg søge interfacet med bottom navigation"""
+        # Hovedlayout
         main_layout = BoxLayout(
             orientation="vertical",
-            spacing=dp(15),
-            padding=[dp(20), dp(20), dp(20), dp(20)]
+            spacing=dp(0),
+            padding=[0, 0, 0, 0]
         )
         
-        # Navy blue gradient baggrund
+        # Clean white background
         with main_layout.canvas.before:
             Color(1, 1, 1, 1)  # Clean white background
             main_layout.bg = Rectangle(size=main_layout.size, pos=main_layout.pos)
         main_layout.bind(size=self._update_bg, pos=self._update_bg)
         
-        # Header med home button
-        header_layout = BoxLayout(
-            orientation="horizontal",
+        # Content area (takes most space)
+        content_layout = BoxLayout(
+            orientation="vertical",
+            spacing=dp(15),
+            padding=[dp(20), dp(20), dp(20), dp(10)]
+        )
+        
+        # Modern search section with clear styling
+        search_container = BoxLayout(
+            orientation='vertical',
             size_hint_y=None,
-            height=dp(60),
+            height=dp(60),  # Reduced height for phone screens
+            spacing=dp(5),
+            padding=[dp(20), dp(10), dp(20), dp(10)]  # Horizontal padding for phone screens
+        )
+        
+        search_layout = BoxLayout(
+            orientation='horizontal',
+            size_hint_y=None,
+            height=dp(45),  # Reduced height for mobile
+            spacing=dp(10)  # Reduced spacing
+        )
+        
+        # Clear search input with rounded corners
+        self.search_input = TextInput(
+            hint_text='Indtast objektnummer...',
+            font_size='16sp',  # Slightly smaller for mobile
+            multiline=False,
+            size_hint_x=0.75,
+            background_color=(1, 1, 1, 0.9),  # Semi-transparent white background
+            foreground_color=(0.2, 0.2, 0.2, 1),  # Dark gray text
+            cursor_color=(0.4, 0.4, 0.4, 1),  # Gray cursor
+            padding=[dp(15), dp(12)]  # Adjusted padding
+        )
+        
+        self.search_input.bind(on_text_validate=self.search_objects)
+        
+        # Compact navy blue search button
+        search_btn = Button(
+            text='SØG',
+            size_hint_x=0.25,
+            font_size='14sp',  # Smaller font for mobile
+            bold=True,
+            color=(1, 1, 1, 1),  # White text
+            background_color=(0.15, 0.25, 0.4, 1)  # Navy blue background
+        )
+        
+        search_btn.bind(on_release=self.search_objects)
+        
+        search_layout.add_widget(self.search_input)
+        search_layout.add_widget(search_btn)
+        search_container.add_widget(search_layout)
+        content_layout.add_widget(search_container)
+        
+        # Recent searches carousel with Volt-style design
+        self.recent_container = BoxLayout(
+            orientation='vertical',
+            size_hint_y=None,
+            height=dp(240),  # Increased height for larger cards
+            padding=[0, dp(10), 0, dp(10)],
             spacing=dp(15)
         )
         
-        # Home button
-        self.home_button = Button(
-            text='Hjem',
-            size_hint=(None, 1),
-            width=dp(80),
-            font_size='16sp',
-            background_color=(0, 0, 0, 0)  # Transparent baggrund
-        )
-        
-        # Stil home button med clean baggrund
-        with self.home_button.canvas.before:
-            Color(0.9, 0.9, 0.9, 1)  # Light gray background
-            self.home_button.bg_rect = RoundedRectangle(
-                pos=self.home_button.pos,
-                size=self.home_button.size,
-                radius=[8, 8, 8, 8]
-            )
-        
-        self.home_button.bind(pos=self._update_button_bg, size=self._update_button_bg)
-        self.home_button.bind(on_press=self.go_to_home)
-        
-        header_layout.add_widget(self.home_button)
-        main_layout.add_widget(header_layout)
-        
-        # Instruktioner med elegant styling
-        instructions_container = BoxLayout(
-            orientation="vertical",
+        # Titel for seneste søgninger
+        recent_title_layout = BoxLayout(
+            orientation='horizontal',
             size_hint_y=None,
-            height=dp(80),
-            spacing=dp(5)
+            height=dp(30),
+            spacing=dp(10)
         )
         
-        main_layout.add_widget(instructions_container)
+        recent_title = Label(
+            text='Seneste søgninger',
+            size_hint_x=1.0,  # Take full width since no clear button
+            font_size='16sp',
+            bold=True,
+            color=(0.3, 0.3, 0.3, 1),
+            halign='left',
+            valign='middle'
+        )
+        recent_title.bind(size=recent_title.setter('text_size'))
+        
+        recent_title_layout.add_widget(recent_title)
+        
+        # Carousel scroll view with generous spacing
+        self.carousel_scroll = ScrollView(
+            size_hint_y=None,
+            height=dp(190),  # Increased height for larger cards
+            do_scroll_y=False,
+            do_scroll_x=True,
+            bar_width=dp(0)  # Hide scrollbars
+        )
+        
+        # Carousel layout - Volt-style with generous spacing
+        self.carousel_layout = BoxLayout(
+            orientation='horizontal',
+            size_hint_x=None,
+            spacing=dp(20),  # Generous spacing between cards as specified
+            padding=[dp(15), 0, dp(15), 0]
+        )
+        self.carousel_layout.bind(minimum_width=self.carousel_layout.setter('width'))
+        
+        self.carousel_scroll.add_widget(self.carousel_layout)
+        
+        self.recent_container.add_widget(recent_title_layout)
+        self.recent_container.add_widget(self.carousel_scroll)
+        
+        content_layout.add_widget(self.recent_container)
+        
+        # Resultater sektion med elegant styling
+        self.results_scroll = ScrollView()
+        self.results_layout = BoxLayout(
+            orientation='vertical',
+            spacing=dp(15),
+            size_hint_y=None,
+            padding=[0, dp(15), 0, dp(15)]
+        )
+        self.results_layout.bind(minimum_height=self.results_layout.setter('height'))
+        
+        self.results_scroll.add_widget(self.results_layout)
+        content_layout.add_widget(self.results_scroll)
+        
+        # Add content to main layout
+        main_layout.add_widget(content_layout)
         
         # Modern search section with clear styling
         search_container = BoxLayout(
@@ -269,7 +413,73 @@ class SearchScreen(Screen):
         self.results_layout.bind(minimum_height=self.results_layout.setter('height'))
         
         self.results_scroll.add_widget(self.results_layout)
-        main_layout.add_widget(self.results_scroll)
+        content_layout.add_widget(self.results_scroll)
+        
+        # Add content to main layout
+        main_layout.add_widget(content_layout)
+        
+        # Bottom navigation bar
+        bottom_nav = BoxLayout(
+            orientation='horizontal',
+            size_hint_y=None,
+            height=dp(60),
+            spacing=dp(20),
+            padding=[dp(20), dp(10), dp(20), dp(10)]
+        )
+        
+        # Bottom nav background
+        with bottom_nav.canvas.before:
+            Color(0.95, 0.95, 0.95, 1)  # Light gray background
+            bottom_nav.bg_rect = Rectangle(
+                pos=bottom_nav.pos,
+                size=bottom_nav.size
+            )
+        bottom_nav.bind(pos=self._update_bottom_nav_bg, size=self._update_bottom_nav_bg)
+        
+        # Home button
+        home_btn = Button(
+            text='🏠 Hjem',
+            size_hint_x=0.5,
+            font_size='14sp',
+            background_color=(0, 0, 0, 0)  # Transparent
+        )
+        
+        # Style home button
+        with home_btn.canvas.before:
+            Color(0.15, 0.25, 0.4, 1)  # Navy blue
+            home_btn.bg_rect = RoundedRectangle(
+                pos=home_btn.pos,
+                size=home_btn.size,
+                radius=[8, 8, 8, 8]
+            )
+        home_btn.bind(pos=self._update_nav_button_bg, size=self._update_nav_button_bg)
+        home_btn.bind(on_press=self.go_to_home)
+        home_btn.color = [1, 1, 1, 1]  # White text
+        
+        # Saved searches button
+        saved_btn = Button(
+            text='⭐ Gemte',
+            size_hint_x=0.5,
+            font_size='14sp',
+            background_color=(0, 0, 0, 0)  # Transparent
+        )
+        
+        # Style saved button
+        with saved_btn.canvas.before:
+            Color(0.15, 0.25, 0.4, 1)  # Navy blue
+            saved_btn.bg_rect = RoundedRectangle(
+                pos=saved_btn.pos,
+                size=saved_btn.size,
+                radius=[8, 8, 8, 8]
+            )
+        saved_btn.bind(pos=self._update_nav_button_bg, size=self._update_nav_button_bg)
+        saved_btn.bind(on_press=self.go_to_saved)
+        saved_btn.color = [1, 1, 1, 1]  # White text
+        
+        bottom_nav.add_widget(home_btn)
+        bottom_nav.add_widget(saved_btn)
+        
+        main_layout.add_widget(bottom_nav)
         
         # Velkomstbesked
         self.update_recent_carousel()
@@ -294,10 +504,32 @@ class SearchScreen(Screen):
             instance.bg_rect.pos = instance.pos
             instance.bg_rect.size = instance.size
     
+    def _update_bottom_nav_bg(self, instance, value):
+        """Opdater bottom navigation baggrund"""
+        if hasattr(instance, 'bg_rect'):
+            instance.bg_rect.pos = instance.pos
+            instance.bg_rect.size = instance.size
+    
+    def _update_nav_button_bg(self, instance, value):
+        """Opdater navigation knap baggrund"""
+        if hasattr(instance, 'bg_rect'):
+            instance.bg_rect.pos = instance.pos
+            instance.bg_rect.size = instance.size
+    
     def go_to_home(self, *args):
         """Gå til hjemmeside (ryd søgeresultater og vis velkomst)"""
         self.clear_results()
         self.search_input.text = ""
+    
+    def go_to_saved(self, *args):
+        """Gå til gemte søgninger"""
+        if self.manager:
+            if not self.manager.has_screen('saved'):
+                # Opret saved screen hvis den ikke eksisterer
+                saved_screen = SavedSearchesScreen()
+                saved_screen.search_screen = self  # Reference til at kunne gemme
+                self.manager.add_widget(saved_screen)
+            self.manager.current = 'saved'
     
     def update_recent_carousel(self):
         """Opdater carousel med seneste søgninger"""
@@ -326,13 +558,20 @@ class SearchScreen(Screen):
     
     def create_carousel_card(self, search_item):
         """Create modern Volt-style card for carousel - 3 cards on phone screen"""
-        # Card container with generous spacing between cards
-        card_container = BoxLayout(
-            orientation='vertical',
+        # Card container with generous spacing between cards - use FloatLayout for overlays
+        from kivy.uix.floatlayout import FloatLayout
+        
+        card_container = FloatLayout(
             size_hint_x=None,
-            width=dp(130),  # Increased width for better proportions
-            spacing=0,  # No internal spacing - all spacing controlled by layout
-            padding=[0, 0, 0, 0]  # No padding on container
+            width=dp(130)
+        )
+        
+        # Main content area
+        content_area = BoxLayout(
+            orientation='vertical',
+            spacing=0,
+            padding=[0, 0, 0, 0],
+            size_hint=(1, 1)
         )
         
         # Image section - takes up top two-thirds of card with rounded top corners
@@ -423,27 +662,76 @@ class SearchScreen(Screen):
             text_section.add_widget(title_label)
         
         # Add unified card background that creates the complete rounded rectangle effect
-        with card_container.canvas.before:
+        with content_area.canvas.before:
             # Soft shadow effect
             Color(0, 0, 0, 0.08)  # Very subtle shadow
-            card_container.shadow_rect = RoundedRectangle(
-                pos=[card_container.pos[0] + dp(2), card_container.pos[1] - dp(2)],
-                size=card_container.size,
+            content_area.shadow_rect = RoundedRectangle(
+                pos=[content_area.pos[0] + dp(2), content_area.pos[1] - dp(2)],
+                size=content_area.size,
                 radius=[16, 16, 16, 16]  # Fully rounded shadow
             )
             # Main card background - this creates the unified rounded rectangle
             Color(1, 1, 1, 1)  # White background
-            card_container.card_bg = RoundedRectangle(
-                pos=card_container.pos,
-                size=card_container.size,
+            content_area.card_bg = RoundedRectangle(
+                pos=content_area.pos,
+                size=content_area.size,
                 radius=[16, 16, 16, 16]  # Complete rounded rectangle
             )
         
-        card_container.bind(pos=self._update_carousel_card_bg, size=self._update_carousel_card_bg)
+        content_area.bind(pos=self._update_carousel_card_bg, size=self._update_carousel_card_bg)
         
-        # Assemble card sections
-        card_container.add_widget(image_section)
-        card_container.add_widget(text_section)
+        # Gem knap i øverste højre hjørne
+        save_btn = Button(
+            text='⭐',
+            size_hint=(None, None),
+            size=(dp(30), dp(30)),
+            pos_hint={'right': 1, 'top': 1},
+            background_color=(0, 0, 0, 0),  # Transparent
+            font_size='16sp'
+        )
+        
+        # Style save button
+        with save_btn.canvas.before:
+            Color(1, 1, 1, 0.9)  # Semi-transparent white
+            save_btn.bg_circle = RoundedRectangle(
+                pos=save_btn.pos,
+                size=save_btn.size,
+                radius=[15, 15, 15, 15]
+            )
+        save_btn.bind(pos=self._update_save_btn_bg, size=self._update_save_btn_bg)
+        
+        # Tjek om allerede gemt
+        obj_number = search_item.get('objectNumber', '')
+        if self.is_saved(obj_number):
+            save_btn.color = [1, 0.8, 0, 1]  # Gylden farve hvis gemt
+        else:
+            save_btn.color = [0.7, 0.7, 0.7, 1]  # Grå hvis ikke gemt
+        
+        def on_save_click(instance):
+            if self.is_saved(obj_number):
+                # Fjern fra gemte
+                self.remove_from_saved_searches(obj_number)
+                instance.color = [0.7, 0.7, 0.7, 1]  # Grå
+            else:
+                # Tilføj til gemte - skal have fulde objekt data
+                try:
+                    results = self.api.search_objects(obj_number, limit=1)
+                    if results:
+                        success = self.add_to_saved_searches(results[0])
+                        if success:
+                            instance.color = [1, 0.8, 0, 1]  # Gylden
+                except Exception as e:
+                    print(f"Fejl ved gemning: {e}")
+        
+        save_btn.bind(on_press=on_save_click)
+        
+        # Tilføj gem knap til card container som overlay
+        card_container.add_widget(content_area)
+        card_container.add_widget(save_btn)
+        
+        # Assemble content sections to content_area
+        content_area.add_widget(image_section)
+        content_area.add_widget(text_section)
         
         # Make card clickable
         def on_card_click(touch):
@@ -470,6 +758,12 @@ class SearchScreen(Screen):
         if hasattr(instance, 'card_bg'):
             instance.card_bg.pos = instance.pos
             instance.card_bg.size = instance.size
+    
+    def _update_save_btn_bg(self, instance, value):
+        """Update save button background"""
+        if hasattr(instance, 'bg_circle'):
+            instance.bg_circle.pos = instance.pos
+            instance.bg_circle.size = instance.size
     
     def search_recent_item(self, search_item):
         """Søg på et element fra seneste søgninger"""
@@ -603,6 +897,7 @@ class DetailScreen(Screen):
         self.current_object = obj
         self.clear_widgets()
         self.build_detail_screen()
+        self.update_save_button_state()
         
     def build_detail_screen(self):
         """Build the detailed object view"""
@@ -655,9 +950,33 @@ class DetailScreen(Screen):
         
         header_layout.add_widget(back_button)
         
-        # Add spacer to push back button to left
+        # Add spacer to push buttons to sides
         header_spacer = Widget()
         header_layout.add_widget(header_spacer)
+        
+        # Save button
+        self.save_button = Button(
+            text='⭐',
+            size_hint=(None, 1),
+            width=dp(50),
+            font_size='20sp',
+            background_color=(0, 0, 0, 0)  # Transparent background
+        )
+        
+        # Style save button
+        with self.save_button.canvas.before:
+            Color(0.15, 0.25, 0.4, 1)  # Navy blue background
+            self.save_button.bg_rect = RoundedRectangle(
+                pos=self.save_button.pos,
+                size=self.save_button.size,
+                radius=[8, 8, 8, 8]
+            )
+        
+        self.save_button.bind(pos=self._update_button_bg, size=self._update_button_bg)
+        self.save_button.bind(on_press=self.toggle_save)
+        self.save_button.color = [1, 1, 1, 1]  # White text
+        
+        header_layout.add_widget(self.save_button)
         
         main_layout.add_widget(header_layout)
         
@@ -1003,6 +1322,50 @@ class DetailScreen(Screen):
         if self.manager:
             self.manager.current = 'search'
     
+    def toggle_save(self, *args):
+        """Toggle save state for current object"""
+        if not self.current_object:
+            return
+            
+        obj_number = self.current_object.get('objectNumber', '')
+        if not obj_number:
+            return
+        
+        # Get search screen reference
+        search_screen = None
+        if self.manager and self.manager.has_screen('search'):
+            search_screen = self.manager.get_screen('search')
+        
+        if search_screen:
+            if search_screen.is_saved(obj_number):
+                # Fjern fra gemte
+                search_screen.remove_from_saved_searches(obj_number)
+                self.save_button.color = [1, 1, 1, 1]  # Hvid
+            else:
+                # Tilføj til gemte
+                success = search_screen.add_to_saved_searches(self.current_object)
+                if success:
+                    self.save_button.color = [1, 0.8, 0, 1]  # Gylden
+    
+    def update_save_button_state(self):
+        """Opdater save button baseret på om objektet er gemt"""
+        if not self.current_object or not hasattr(self, 'save_button'):
+            return
+            
+        obj_number = self.current_object.get('objectNumber', '')
+        if not obj_number:
+            return
+        
+        # Get search screen reference
+        search_screen = None
+        if self.manager and self.manager.has_screen('search'):
+            search_screen = self.manager.get_screen('search')
+        
+        if search_screen and search_screen.is_saved(obj_number):
+            self.save_button.color = [1, 0.8, 0, 1]  # Gylden hvis gemt
+        else:
+            self.save_button.color = [1, 1, 1, 1]  # Hvid hvis ikke gemt
+    
     def _update_bg(self, instance, value):
         """Update background"""
         if hasattr(instance, 'bg'):
@@ -1026,6 +1389,367 @@ class DetailScreen(Screen):
         if hasattr(instance, 'bg_rect'):
             instance.bg_rect.pos = instance.pos
             instance.bg_rect.size = instance.size
+
+
+class SavedSearchesScreen(Screen):
+    """Skærm til gemte søgninger"""
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.name = "saved"
+        self.search_screen = None  # Reference til SearchScreen
+        self.build_screen()
+    
+    def build_screen(self):
+        """Byg gemte søgninger interface"""
+        # Hovedlayout
+        main_layout = BoxLayout(
+            orientation="vertical",
+            spacing=dp(0),
+            padding=[0, 0, 0, 0]
+        )
+        
+        # Clean white background
+        with main_layout.canvas.before:
+            Color(1, 1, 1, 1)  # White background
+            main_layout.bg = Rectangle(size=main_layout.size, pos=main_layout.pos)
+        main_layout.bind(size=self._update_bg, pos=self._update_bg)
+        
+        # Content area
+        content_layout = BoxLayout(
+            orientation="vertical",
+            spacing=dp(15),
+            padding=[dp(20), dp(20), dp(20), dp(10)]
+        )
+        
+        # Header titel
+        header_label = Label(
+            text='Gemte søgninger',
+            size_hint_y=None,
+            height=dp(50),
+            font_size='24sp',
+            bold=True,
+            color=(0.2, 0.2, 0.2, 1),
+            halign='center',
+            valign='middle'
+        )
+        header_label.bind(size=header_label.setter('text_size'))
+        content_layout.add_widget(header_label)
+        
+        # Carousel for gemte søgninger
+        self.saved_scroll = ScrollView(
+            do_scroll_y=False,
+            do_scroll_x=True,
+            bar_width=dp(0)
+        )
+        
+        self.saved_layout = BoxLayout(
+            orientation='horizontal',
+            size_hint_x=None,
+            spacing=dp(20),
+            padding=[dp(15), 0, dp(15), 0]
+        )
+        self.saved_layout.bind(minimum_width=self.saved_layout.setter('width'))
+        
+        self.saved_scroll.add_widget(self.saved_layout)
+        content_layout.add_widget(self.saved_scroll)
+        
+        main_layout.add_widget(content_layout)
+        
+        # Bottom navigation bar (samme som SearchScreen)
+        bottom_nav = BoxLayout(
+            orientation='horizontal',
+            size_hint_y=None,
+            height=dp(60),
+            spacing=dp(20),
+            padding=[dp(20), dp(10), dp(20), dp(10)]
+        )
+        
+        # Bottom nav background
+        with bottom_nav.canvas.before:
+            Color(0.95, 0.95, 0.95, 1)  # Light gray background
+            bottom_nav.bg_rect = Rectangle(
+                pos=bottom_nav.pos,
+                size=bottom_nav.size
+            )
+        bottom_nav.bind(pos=self._update_bottom_nav_bg, size=self._update_bottom_nav_bg)
+        
+        # Home button
+        home_btn = Button(
+            text='🏠 Hjem',
+            size_hint_x=0.5,
+            font_size='14sp',
+            background_color=(0, 0, 0, 0)
+        )
+        
+        with home_btn.canvas.before:
+            Color(0.15, 0.25, 0.4, 1)
+            home_btn.bg_rect = RoundedRectangle(
+                pos=home_btn.pos,
+                size=home_btn.size,
+                radius=[8, 8, 8, 8]
+            )
+        home_btn.bind(pos=self._update_nav_button_bg, size=self._update_nav_button_bg)
+        home_btn.bind(on_press=self.go_to_home)
+        home_btn.color = [1, 1, 1, 1]
+        
+        # Saved searches button (highlighted da vi er her)
+        saved_btn = Button(
+            text='⭐ Gemte',
+            size_hint_x=0.5,
+            font_size='14sp',
+            background_color=(0, 0, 0, 0)
+        )
+        
+        with saved_btn.canvas.before:
+            Color(0.2, 0.4, 0.6, 1)  # Lighter blue to show active
+            saved_btn.bg_rect = RoundedRectangle(
+                pos=saved_btn.pos,
+                size=saved_btn.size,
+                radius=[8, 8, 8, 8]
+            )
+        saved_btn.bind(pos=self._update_nav_button_bg, size=self._update_nav_button_bg)
+        saved_btn.color = [1, 1, 1, 1]
+        
+        bottom_nav.add_widget(home_btn)
+        bottom_nav.add_widget(saved_btn)
+        
+        main_layout.add_widget(bottom_nav)
+        
+        self.add_widget(main_layout)
+        
+        # Load saved searches når skærmen bygges
+        self.update_saved_carousel()
+    
+    def update_saved_carousel(self):
+        """Opdater carousel med gemte søgninger"""
+        self.saved_layout.clear_widgets()
+        
+        if not self.search_screen or not self.search_screen.saved_searches:
+            # Vis "ingen gemte søgninger" besked
+            no_saved_label = Label(
+                text='Ingen gemte søgninger endnu\nTryk ⭐ på objekter for at gemme dem',
+                size_hint_x=None,
+                width=dp(320),
+                font_size='16sp',
+                color=(0.6, 0.6, 0.6, 1),
+                halign='center',
+                valign='middle'
+            )
+            no_saved_label.bind(size=no_saved_label.setter('text_size'))
+            self.saved_layout.add_widget(no_saved_label)
+            return
+        
+        # Tilføj gemte søgninger til carousel
+        for search_item in self.search_screen.saved_searches:
+            card = self.create_saved_card(search_item)
+            self.saved_layout.add_widget(card)
+    
+    def create_saved_card(self, search_item):
+        """Create card for saved item med fjern knap"""
+        # Genbruger samme design som recent search cards
+        card_container = BoxLayout(
+            orientation='vertical',
+            size_hint_x=None,
+            width=dp(130),
+            spacing=0,
+            padding=[0, 0, 0, 0]
+        )
+        
+        # Image section
+        image_section = BoxLayout(
+            orientation='vertical',
+            size_hint_y=None,
+            height=dp(110)
+        )
+        
+        if search_item.get('hasImage') and search_item.get('primaryImage'):
+            image = AsyncImage(
+                source=search_item['primaryImage'],
+                fit_mode="cover",
+                size_hint=(1, 1)
+            )
+            image_section.add_widget(image)
+        else:
+            placeholder_container = BoxLayout(orientation='vertical')
+            
+            with placeholder_container.canvas.before:
+                Color(0.96, 0.97, 0.98, 1)
+                placeholder_container.placeholder_bg = RoundedRectangle(
+                    pos=placeholder_container.pos,
+                    size=placeholder_container.size,
+                    radius=[16, 16, 0, 0]
+                )
+            
+            placeholder_container.bind(pos=self._update_placeholder_bg, size=self._update_placeholder_bg)
+            
+            placeholder_label = Label(
+                text='Intet billede',
+                font_size='14sp',
+                color=(0.7, 0.7, 0.7, 1),
+                halign='center',
+                valign='middle'
+            )
+            placeholder_container.add_widget(placeholder_label)
+            image_section.add_widget(placeholder_container)
+        
+        # Text section
+        text_section = BoxLayout(
+            orientation='vertical',
+            size_hint_y=None,
+            height=dp(55),
+            padding=[dp(12), dp(8), dp(12), dp(8)],
+            spacing=dp(4)
+        )
+        
+        title_text = search_item.get('title', 'Ingen titel')
+        if len(title_text) > 20:
+            title_text = title_text[:17] + '...'
+        
+        title_label = Label(
+            text=title_text,
+            font_size='12sp',
+            bold=True,
+            color=(0.2, 0.2, 0.2, 1),
+            halign='center',
+            valign='top',
+            text_size=(dp(106), None),
+            max_lines=1
+        )
+        
+        objektnummer = search_item.get('objectNumber', '')
+        if objektnummer:
+            subtitle_label = Label(
+                text=objektnummer,
+                font_size='10sp',
+                color=(0.6, 0.6, 0.6, 1),
+                halign='center',
+                valign='top',
+                text_size=(dp(106), None)
+            )
+            text_section.add_widget(title_label)
+            text_section.add_widget(subtitle_label)
+        else:
+            text_section.add_widget(title_label)
+        
+        # Card background
+        with card_container.canvas.before:
+            Color(0, 0, 0, 0.08)
+            card_container.shadow_rect = RoundedRectangle(
+                pos=[card_container.pos[0] + dp(2), card_container.pos[1] - dp(2)],
+                size=card_container.size,
+                radius=[16, 16, 16, 16]
+            )
+            Color(1, 1, 1, 1)
+            card_container.card_bg = RoundedRectangle(
+                pos=card_container.pos,
+                size=card_container.size,
+                radius=[16, 16, 16, 16]
+            )
+        
+        card_container.bind(pos=self._update_carousel_card_bg, size=self._update_carousel_card_bg)
+        
+        # Fjern knap i øverste højre hjørne
+        remove_btn = Button(
+            text='✕',
+            size_hint=(None, None),
+            size=(dp(30), dp(30)),
+            pos_hint={'right': 1, 'top': 1},
+            background_color=(0, 0, 0, 0),
+            font_size='16sp'
+        )
+        
+        with remove_btn.canvas.before:
+            Color(1, 0.3, 0.3, 0.9)  # Rød baggrund
+            remove_btn.bg_circle = RoundedRectangle(
+                pos=remove_btn.pos,
+                size=remove_btn.size,
+                radius=[15, 15, 15, 15]
+            )
+        remove_btn.bind(pos=self._update_save_btn_bg, size=self._update_save_btn_bg)
+        remove_btn.color = [1, 1, 1, 1]  # Hvid tekst
+        
+        def on_remove_click(instance):
+            obj_number = search_item.get('objectNumber', '')
+            if self.search_screen:
+                self.search_screen.remove_from_saved_searches(obj_number)
+        
+        remove_btn.bind(on_press=on_remove_click)
+        
+        # Tilføj fjern knap som overlay
+        card_container.add_widget(remove_btn)
+        
+        card_container.add_widget(image_section)
+        card_container.add_widget(text_section)
+        
+        # Make card clickable
+        def on_card_click(touch):
+            if card_container.collide_point(*touch.pos):
+                self.view_saved_item(search_item)
+                return True
+            return False
+        
+        card_container.on_touch_down = on_card_click
+        
+        return card_container
+    
+    def view_saved_item(self, search_item):
+        """Vis gemt objekt i detail view"""
+        obj_number = search_item.get('objectNumber', '')
+        if obj_number and self.search_screen:
+            try:
+                results = self.search_screen.api.search_objects(obj_number, limit=1)
+                if results:
+                    if self.manager:
+                        detail_screen = self.manager.get_screen('detail')
+                        detail_screen.show_object(results[0])
+                        self.manager.current = 'detail'
+            except Exception as e:
+                print(f"Error viewing saved item: {e}")
+    
+    def go_to_home(self, *args):
+        """Gå til søgeskærm"""
+        if self.manager:
+            self.manager.current = 'search'
+    
+    def _update_bg(self, instance, value):
+        """Update background"""
+        if hasattr(instance, 'bg'):
+            instance.bg.pos = instance.pos
+            instance.bg.size = instance.size
+    
+    def _update_bottom_nav_bg(self, instance, value):
+        """Update bottom nav background"""
+        if hasattr(instance, 'bg_rect'):
+            instance.bg_rect.pos = instance.pos
+            instance.bg_rect.size = instance.size
+    
+    def _update_nav_button_bg(self, instance, value):
+        """Update nav button background"""
+        if hasattr(instance, 'bg_rect'):
+            instance.bg_rect.pos = instance.pos
+            instance.bg_rect.size = instance.size
+    
+    def _update_placeholder_bg(self, instance, value):
+        """Update placeholder background"""
+        if hasattr(instance, 'placeholder_bg'):
+            instance.placeholder_bg.pos = instance.pos
+            instance.placeholder_bg.size = instance.size
+    
+    def _update_carousel_card_bg(self, instance, value):
+        """Update card background"""
+        if hasattr(instance, 'shadow_rect'):
+            instance.shadow_rect.pos = [instance.pos[0] + dp(2), instance.pos[1] - dp(2)]
+            instance.shadow_rect.size = instance.size
+        if hasattr(instance, 'card_bg'):
+            instance.card_bg.pos = instance.pos
+            instance.card_bg.size = instance.size
+    
+    def _update_save_btn_bg(self, instance, value):
+        """Update save button background"""
+        if hasattr(instance, 'bg_circle'):
+            instance.bg_circle.pos = instance.pos
+            instance.bg_circle.size = instance.size
 
 
 class SaraMuseumApp(App):

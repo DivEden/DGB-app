@@ -289,7 +289,7 @@ class SaraAPI:
             'isHighlight': False,  # SARA har ikke highlight system som Met
             'creditLine': get_multilang_text('.//credit_line', ''),
             'acquisitionYear': get_text('.//acquisition.date', '').split('-')[0] if get_text('.//acquisition.date', '') else '',
-            'repository': 'SARA - Danmarks Geologiske og Biologiske Samling',
+            'repository': 'SARA Museum Database',
             'objectURL': f"https://sara.dk/object/{obj_data['priref']}" if obj_data['priref'] else '',
         })
         
