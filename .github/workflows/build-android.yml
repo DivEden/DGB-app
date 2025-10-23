@@ -99,18 +99,37 @@ jobs:
         echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
         echo "ANDROIDSDK=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
         echo "ANDROID_NDK_ROOT=$ANDROID_SDK_ROOT/ndk/25.2.9519653" >> $GITHUB_ENV
+        echo "ANDROIDNDK=$ANDROID_SDK_ROOT/ndk/25.2.9519653" >> $GITHUB_ENV
+        echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/25.2.9519653" >> $GITHUB_ENV
         echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
+        
+        # Override any conflicting system NDK paths
+        echo "ANDROID_NDK=$ANDROID_SDK_ROOT/ndk/25.2.9519653" >> $GITHUB_ENV
 
     - name: Build Android APK
       working-directory: .
       run: |
         export PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$ANDROID_SDK_ROOT/build-tools/31.0.0:$PATH
+        
+        # Force correct environment variables to override system defaults
         export ANDROIDAPI="31"
         export ANDROIDMINAPI="21"
         export ANDROIDNDK="25b"
+        export ANDROID_SDK_ROOT="/home/runner/android-sdk"
+        export ANDROID_HOME="/home/runner/android-sdk"
+        export ANDROIDSDK="/home/runner/android-sdk"
+        export ANDROID_NDK_ROOT="/home/runner/android-sdk/ndk/25.2.9519653"
+        export ANDROIDNDK="/home/runner/android-sdk/ndk/25.2.9519653"
+        export ANDROID_NDK_HOME="/home/runner/android-sdk/ndk/25.2.9519653"
+        export ANDROID_NDK="/home/runner/android-sdk/ndk/25.2.9519653"
+        
+        # Clear any conflicting buildozer cache
+        rm -rf ~/.buildozer/android/platform/android-ndk-* || true
         
         # Verify environment
+        echo "=== Environment Check ==="
         echo "Android SDK Root: $ANDROID_SDK_ROOT"
+        echo "Android Home: $ANDROID_HOME"
         echo "Java Home: $JAVA_HOME"
         echo "NDK Root: $ANDROID_NDK_ROOT"
         echo "Current directory: $(pwd)"
@@ -139,8 +158,16 @@ jobs:
         which aidl || echo "aidl not in PATH, using direct path"
         $ANDROID_SDK_ROOT/build-tools/31.0.0/aidl --version 2>/dev/null || echo "Direct aidl test completed"
         
-        # Start the build
-        buildozer android debug
+        # Check NDK exists
+        if [ ! -d "$ANDROID_NDK_ROOT" ]; then
+          echo "ERROR: NDK not found at $ANDROID_NDK_ROOT"
+          ls -la $ANDROID_SDK_ROOT/ndk/ || echo "No NDK directory found"
+          exit 1
+        fi
+        
+        echo "=== Starting Build ==="
+        # Add verbose flag to see more details
+        buildozer -v android debug
 
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4
