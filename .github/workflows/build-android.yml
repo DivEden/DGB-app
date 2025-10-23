@@ -24,8 +24,6 @@ jobs:
       - name: Build APK with Docker
         run: |
           # Use the official kivy/buildozer Docker image
-          # Copy buildozer.spec to the source directory first
-          cp buildozer.spec museum_search_app/
           docker run --rm \
             -v "$PWD":/home/user/hostcwd \
             -v "$PWD/.buildozer_global":/home/user/.buildozer \

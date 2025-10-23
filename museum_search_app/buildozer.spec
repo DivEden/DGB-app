@@ -10,7 +10,7 @@ package.name = museumsearch
 package.domain = dk.natmus
 
 # (str) Source code where the main.py live
-source.dir = museum_search_app
+source.dir = .
 
 # (list) Source files to include (leave empty to include all the files)
 source.include_exts = py,png,jpg,kv,atlas
