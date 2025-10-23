@@ -102,6 +102,7 @@ jobs:
         echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
 
     - name: Build Android APK
+      working-directory: .
       run: |
         export PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$ANDROID_SDK_ROOT/build-tools/31.0.0:$PATH
         export ANDROIDAPI="31"
@@ -112,6 +113,27 @@ jobs:
         echo "Android SDK Root: $ANDROID_SDK_ROOT"
         echo "Java Home: $JAVA_HOME"
         echo "NDK Root: $ANDROID_NDK_ROOT"
+        echo "Current directory: $(pwd)"
+        echo "Directory contents:"
+        ls -la
+        
+        # Check that buildozer.spec exists
+        if [ ! -f "buildozer.spec" ]; then
+          echo "ERROR: buildozer.spec not found in current directory"
+          exit 1
+        fi
+        
+        # Check that source directory exists
+        if [ ! -d "museum_search_app" ]; then
+          echo "ERROR: museum_search_app directory not found"
+          exit 1
+        fi
+        
+        # Check that main.py exists in source directory
+        if [ ! -f "museum_search_app/main.py" ]; then
+          echo "ERROR: main.py not found in museum_search_app directory"
+          exit 1
+        fi
         
         # Check that aidl tool is available
         which aidl || echo "aidl not in PATH, using direct path"
