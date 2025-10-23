@@ -15,23 +15,45 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build with Buildozer
-        uses: ArtemSBulgakov/buildozer-action@v1
-        id: buildozer
+      - name: Set up buildozer cache
+        uses: actions/cache@v4
         with:
-          command: buildozer android debug
-          workdir: museum_search_app
-          buildozer_version: stable
+          path: .buildozer_global
+          key: buildozer-${{ hashFiles('buildozer.spec') }}
+
+      - name: Build APK with Docker
+        run: |
+          # Use the official kivy/buildozer Docker image
+          docker run --rm \
+            -v "$PWD":/home/user/hostcwd \
+            -v "$PWD/.buildozer_global":/home/user/.buildozer \
+            --workdir /home/user/hostcwd/museum_search_app \
+            -e BUILDOZER_WARN_ON_ROOT=0 \
+            -e APP_ANDROID_ACCEPT_SDK_LICENSE=1 \
+            kivy/buildozer:latest \
+            buildozer android debug
+
+      - name: Find APK file
+        id: find_apk
+        run: |
+          APK_FILE=$(find museum_search_app/bin -name "*.apk" -type f | head -n 1)
+          if [ -z "$APK_FILE" ]; then
+            echo "No APK file found!"
+            ls -la museum_search_app/bin/ || echo "No bin directory"
+            exit 1
+          fi
+          echo "filename=$APK_FILE" >> $GITHUB_OUTPUT
+          echo "Found APK: $APK_FILE"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: android-apk
-          path: ${{ steps.buildozer.outputs.filename }}
+          path: ${{ steps.find_apk.outputs.filename }}
           retention-days: 30
 
-      - name: Show APK location
+      - name: Show build info
         run: |
           echo "APK built successfully!"
-          echo "Location: ${{ steps.buildozer.outputs.filename }}"
-          ls -la museum_search_app/bin/ || true
+          echo "Location: ${{ steps.find_apk.outputs.filename }}"
+          ls -la museum_search_app/bin/
