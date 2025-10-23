@@ -1,12 +1,11 @@
 name: Build Android APK
 
-# Trigger the workflow on push to main branch or manual trigger
 on:
   push:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
-  workflow_dispatch:  # Allow manual trigger
+  workflow_dispatch:
 
 jobs:
   build-android:
@@ -29,8 +28,6 @@ jobs:
           git \
           python3-dev \
           python3-pip \
-          python3-setuptools \
-          python3-wheel \
           openjdk-17-jdk \
           unzip \
           zlib1g-dev \
@@ -43,202 +40,81 @@ jobs:
           autoconf \
           libtool \
           pkg-config \
-          libltdl-dev \
-          ccache \
           zip \
           wget \
           curl
-          
-    - name: Set environment variables
-      run: |
-        echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
-        echo "/usr/lib/jvm/java-17-openjdk-amd64/bin" >> $GITHUB_PATH
-        echo "ANDROID_API_LEVEL=31" >> $GITHUB_ENV
-        echo "ANDROID_BUILD_TOOLS_VERSION=31.0.0" >> $GITHUB_ENV
-        
+
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install buildozer cython==0.29.36 python-for-android
-        
-    - name: Setup Android SDK
-      uses: android-actions/setup-android@v3
-      with:
-        cmdline-tools-version: 11076708
-        packages: "platform-tools platforms;android-31 build-tools;31.0.0 ndk;25.2.9519653"
-        accept-android-sdk-licenses: true
-        
-    - name: Set Android environment variables
+        pip install buildozer cython python-for-android
+
+    - name: Setup Android SDK manually
       run: |
+        # Set up Android SDK
+        export ANDROID_SDK_ROOT=$HOME/android-sdk
+        mkdir -p $ANDROID_SDK_ROOT
+        cd $ANDROID_SDK_ROOT
+        
+        # Download command line tools
+        wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+        unzip -q commandlinetools-linux-11076708_latest.zip
+        mkdir -p cmdline-tools
+        mv cmdline-tools latest_temp
+        mv latest_temp cmdline-tools/latest
+        
+        # Set up environment
+        export PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH
+        export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+        
+        # Accept all licenses first
+        mkdir -p $ANDROID_SDK_ROOT/licenses
+        echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > $ANDROID_SDK_ROOT/licenses/android-sdk-license
+        echo "84831b9409646a918e30573bab4c9c91346d8abd" > $ANDROID_SDK_ROOT/licenses/android-sdk-preview-license
+        echo "d56f5187479451eabf01fb78af6dfcb131a6481e" > $ANDROID_SDK_ROOT/licenses/android-googletv-license
+        echo "601085b94cd77f0b54ff86406957099ebe79c4d6" > $ANDROID_SDK_ROOT/licenses/android-sdk-preview-license
+        echo "e9acab5b5fbb560a72cfaecce8946896ff6aab9d" > $ANDROID_SDK_ROOT/licenses/mips-android-sysimage-license
+        
+        # Install specific components without prompts
+        sdkmanager --update --verbose
+        sdkmanager "platform-tools" --verbose
+        sdkmanager "platforms;android-31" --verbose  
+        sdkmanager "build-tools;31.0.0" --verbose
+        sdkmanager "ndk;25.2.9519653" --verbose
+        
+        # Verify aidl tool exists and is executable
+        ls -la $ANDROID_SDK_ROOT/build-tools/31.0.0/
+        chmod +x $ANDROID_SDK_ROOT/build-tools/31.0.0/aidl
+        
+        # Set environment variables for later steps
         echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
         echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
+        echo "ANDROIDSDK=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
         echo "ANDROID_NDK_ROOT=$ANDROID_SDK_ROOT/ndk/25.2.9519653" >> $GITHUB_ENV
-        echo "P4A_ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
-        echo "P4A_ANDROID_NDK_ROOT=$ANDROID_SDK_ROOT/ndk/25.2.9519653" >> $GITHUB_ENV
-        echo "BUILDOZER_ANDROID_SDK_PATH=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
-        echo "BUILDOZER_ANDROID_NDK_PATH=$ANDROID_SDK_ROOT/ndk/25.2.9519653" >> $GITHUB_ENV
-        echo "$ANDROID_SDK_ROOT/build-tools/31.0.0:$ANDROID_SDK_ROOT/platform-tools:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin" >> $GITHUB_PATH
-        
-        # Create buildozer config directory and set paths
-        mkdir -p ~/.buildozer
-        echo "[buildozer]" > ~/.buildozer/config.ini
-        echo "android_sdk_path = $ANDROID_SDK_ROOT" >> ~/.buildozer/config.ini
-        echo "android_ndk_path = $ANDROID_SDK_ROOT/ndk/25.2.9519653" >> ~/.buildozer/config.ini
-        
-        # Create symlink for old SDK tools structure compatibility
-        mkdir -p $ANDROID_SDK_ROOT/tools/bin
-        ln -sf $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager $ANDROID_SDK_ROOT/tools/bin/sdkmanager
-        ln -sf $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/avdmanager $ANDROID_SDK_ROOT/tools/bin/avdmanager
-        
-    - name: Verify Android SDK setup
-      shell: bash
-      run: |
-        echo "=== Android Environment ==="
-        echo "Android SDK Root: $ANDROID_SDK_ROOT"
-        echo "Android Home: $ANDROID_HOME" 
-        echo "Android NDK: $ANDROID_NDK_ROOT"
-        echo "PATH: $PATH"
-        
-        # Check SDK installation
-        echo "=== SDK Verification ==="
-        echo "SDK directory contents:"
-        /bin/ls -la $ANDROID_SDK_ROOT/ 2>/dev/null || find $ANDROID_SDK_ROOT -maxdepth 1 -type d 2>/dev/null || { echo "ERROR: SDK directory not accessible"; exit 1; }
-        
-        echo "Build tools directory contents:"
-        /bin/ls -la $ANDROID_SDK_ROOT/build-tools/ 2>/dev/null || find $ANDROID_SDK_ROOT/build-tools -maxdepth 1 -type d 2>/dev/null || { echo "ERROR: Build tools directory not found"; exit 1; }
-        
-        echo "Build tools 31.0.0 contents:"
-        /bin/ls -la $ANDROID_SDK_ROOT/build-tools/31.0.0/ 2>/dev/null || find $ANDROID_SDK_ROOT/build-tools/31.0.0 -maxdepth 1 -type f 2>/dev/null || { echo "ERROR: Build tools 31.0.0 not found"; exit 1; }
-        
-        echo "NDK directory contents:"
-        /bin/ls -la $ANDROID_SDK_ROOT/ndk/ 2>/dev/null || find $ANDROID_SDK_ROOT/ndk -maxdepth 1 -type d 2>/dev/null || echo "WARNING: NDK directory not found"
-        test -d $ANDROID_SDK_ROOT/ndk/25.2.9519653/ && echo "NDK 25.2.9519653 found" || echo "WARNING: NDK 25.2.9519653 not found"
-        
-        # Verify critical tools exist
-        echo "=== Tool Verification ==="
-        echo "Checking for aidl:"
-        test -f $ANDROID_SDK_ROOT/build-tools/31.0.0/aidl && echo "aidl found" || { echo "ERROR: aidl not found"; exit 1; }
-        
-        echo "Making aidl executable:"
-        chmod +x $ANDROID_SDK_ROOT/build-tools/31.0.0/aidl || { echo "ERROR: Failed to make aidl executable"; exit 1; }
-        
-        echo "Testing aidl tool:"
-        $ANDROID_SDK_ROOT/build-tools/31.0.0/aidl --version 2>/dev/null || echo "WARNING: aidl tool test failed"
-        
-        echo "=== SDK Setup Complete ==="
-        
-    - name: Cache buildozer dependencies
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.buildozer
-          ~/.gradle
-          ~/.android
-        key: ${{ runner.os }}-buildozer-${{ hashFiles('**/buildozer.spec') }}
-        restore-keys: |
-          ${{ runner.os }}-buildozer-
-          
+        echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
+
     - name: Build Android APK
-      working-directory: ./museum_search_app
-      shell: bash
-      env:
-        ANDROID_SDK_MANAGER: ${{ env.ANDROID_SDK_ROOT }}/cmdline-tools/latest/bin/sdkmanager
       run: |
-        echo "=== Starting APK Build ==="
-        pwd
-        echo "Directory contents:"
-        /bin/ls -la || echo "ls not found, using alternative"
-        find . -maxdepth 1 -type f -name "*.py" -o -name "*.spec" || echo "find failed"
+        export PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$ANDROID_SDK_ROOT/build-tools/31.0.0:$PATH
+        export ANDROIDAPI="31"
+        export ANDROIDMINAPI="21"
+        export ANDROIDNDK="25b"
         
-        echo "=== Final Environment Check ==="
+        # Verify environment
         echo "Android SDK Root: $ANDROID_SDK_ROOT"
-        echo "Android Home: $ANDROID_HOME" 
-        echo "Android NDK: $ANDROID_NDK_ROOT"
-        echo "Android SDK Manager: $ANDROID_SDK_MANAGER"
-        echo "PATH: $PATH"
-        echo "Shell: $SHELL"
+        echo "Java Home: $JAVA_HOME"
+        echo "NDK Root: $ANDROID_NDK_ROOT"
         
-        # Verify SDK manager exists
-        echo "=== SDK Manager Verification ==="
-        echo "Checking cmdline-tools sdkmanager:"
-        test -f $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager && echo "cmdline-tools sdkmanager found" || echo "cmdline-tools sdkmanager NOT found"
-        echo "Checking tools/bin sdkmanager (symlink):"
-        test -f $ANDROID_SDK_ROOT/tools/bin/sdkmanager && echo "tools/bin sdkmanager found" || echo "tools/bin sdkmanager NOT found"
+        # Check that aidl tool is available
+        which aidl || echo "aidl not in PATH, using direct path"
+        $ANDROID_SDK_ROOT/build-tools/31.0.0/aidl --version 2>/dev/null || echo "Direct aidl test completed"
         
-        # Update buildozer.spec with correct paths
-        echo "=== Updating buildozer.spec with SDK paths ==="
-        sed -i "s|android.sdk_path =.*|android.sdk_path = $ANDROID_SDK_ROOT|g" buildozer.spec
-        sed -i "s|android.ndk_path =.*|android.ndk_path = $ANDROID_NDK_ROOT|g" buildozer.spec
-        
-        # Verify paths are set correctly
-        echo "SDK and NDK paths in buildozer.spec:"
-        grep -E "(android.sdk_path|android.ndk_path)" buildozer.spec
-        
-        echo "=== Buildozer Configuration ==="
-        echo "Checking buildozer.spec exists:"
-        test -f buildozer.spec && echo "buildozer.spec found" || { echo "ERROR: buildozer.spec not found"; exit 1; }
-        
-        echo "Checking main.py exists:"
-        test -f main.py && echo "main.py found" || { echo "ERROR: main.py not found"; exit 1; }
-        
-        echo "=== Python Environment Check ==="
-        python3 --version
-        pip3 list | grep -E "(kivy|requests|lxml|urllib3|certifi|pillow)" || echo "Some required packages may be missing"
-        
-        echo "=== Buildozer Version ==="
-        buildozer version || echo "Could not get buildozer version"
-        
-        echo "=== Starting Build Process ==="
-        # Set buildozer log level to 2 for detailed debugging
-        export BUILDOZER_LOG_LEVEL=2
-        
-        # Run buildozer with maximum verbosity and capture all output
-        echo "Running buildozer with detailed logging..."
-        buildozer --verbose android debug 2>&1 | tee buildozer.log
-        
-        # Check if build was successful
-        BUILD_EXIT_CODE=${PIPESTATUS[0]}
-        echo "Buildozer exit code: $BUILD_EXIT_CODE"
-        
-        if [ $BUILD_EXIT_CODE -ne 0 ]; then
-          echo "=== BUILD FAILED - Detailed Error Analysis ==="
-          
-          echo "=== Last 50 lines of buildozer.log ==="
-          tail -n 50 buildozer.log || echo "Could not read buildozer.log"
-          
-          echo "=== Python-for-Android build logs ==="
-          find ~/.buildozer -name "*.log" -type f -print0 | while IFS= read -r -d '' logfile; do
-            echo "=== Log file: $logfile ==="
-            tail -n 20 "$logfile" 2>/dev/null || echo "Could not read $logfile"
-          done
-          
-          echo "=== Searching for compilation errors ==="
-          grep -i -A 5 -B 5 "error\|failed\|exception\|traceback\|fatal\|cannot find" buildozer.log | tail -n 30 || echo "No specific error patterns found"
-          
-          echo "=== P4A build directory contents ==="
-          find ~/.buildozer/android/platform/build-* -name "*.log" -type f 2>/dev/null | head -5 | while read logfile; do
-            echo "=== P4A log: $logfile ==="
-            tail -n 15 "$logfile" 2>/dev/null || echo "Could not read $logfile"
-          done
-          
-          echo "=== Disk space check ==="
-          df -h || echo "Could not check disk space"
-          
-          exit $BUILD_EXIT_CODE
-        fi
-        
-        echo "Build completed successfully!"
-        
+        # Start the build
+        buildozer android debug
+
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4
       with:
         name: museum-search-app-debug
-        path: museum_search_app/bin/*.apk
+        path: bin/*.apk
         retention-days: 30
-        
-    - name: List build output
-      working-directory: ./museum_search_app
-      run: |
-        echo "Build completed! Generated files:"
-        ls -la bin/ || echo "No bin directory found"
-        find . -name "*.apk" -type f || echo "No APK files found"
