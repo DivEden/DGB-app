@@ -31,7 +31,7 @@ jobs:
             -e APP_ANDROID_ACCEPT_SDK_LICENSE=1 \
             --entrypoint /bin/bash \
             kivy/buildozer:latest \
-            -c "cd /home/user/hostcwd/museum_search_app && /home/user/.venv/bin/buildozer android debug"
+            -c "cd /home/user/hostcwd/museum_search_app && echo 'y' | /home/user/.venv/bin/buildozer android debug"
 
       - name: Find APK file
         id: find_apk
