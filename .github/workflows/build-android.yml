@@ -59,9 +59,17 @@ jobs:
         # Download command line tools
         wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
         unzip -q commandlinetools-linux-11076708_latest.zip
-        mkdir -p cmdline-tools
-        mv cmdline-tools latest_temp
-        mv latest_temp cmdline-tools/latest
+        ls -la  # Debug: see what was extracted
+        mkdir -p cmdline-tools/latest
+        mv cmdline-tools/* cmdline-tools/latest/ 2>/dev/null || true
+        # Alternative approach if the above fails
+        if [ -d "cmdline-tools" ] && [ ! -f "cmdline-tools/latest/bin/sdkmanager" ]; then
+          rm -rf cmdline-tools
+          mkdir -p cmdline-tools
+          unzip -q commandlinetools-linux-11076708_latest.zip -d temp
+          mv temp/cmdline-tools cmdline-tools/latest
+          rm -rf temp
+        fi
         
         # Set up environment
         export PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH
