@@ -45,10 +45,9 @@ jobs:
             libavformat-dev \
             libavcodec-dev \
             zlib1g-dev \
-            libgstreamer1.0 \
+            libgstreamer1.0-0 \
             gstreamer1.0-plugins-base \
             gstreamer1.0-plugins-good \
-            build-essential \
             libsqlite3-dev \
             sqlite3 \
             bzip2 \
@@ -62,9 +61,12 @@ jobs:
             libncursesw5-dev \
             libffi-dev \
             uuid-dev \
-            libffi7 \
+            libffi8 \
             lld \
-            libtool
+            libtool \
+            autoconf \
+            automake \
+            openjdk-17-jdk
 
       - name: Install Python dependencies
         run: |
