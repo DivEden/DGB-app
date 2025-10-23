@@ -38,16 +38,25 @@ jobs:
           libffi-dev \
           libssl-dev \
           autoconf \
+          automake \
           libtool \
           pkg-config \
           zip \
           wget \
-          curl
+          curl \
+          gettext \
+          texinfo \
+          gperf \
+          m4 \
+          bison \
+          flex
 
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install buildozer cython python-for-android
+        pip install buildozer cython==0.29.36
+        # Install specific p4a version that's known to work
+        pip install python-for-android==2024.01.21
 
     - name: Setup Android SDK manually
       run: |
@@ -126,6 +135,15 @@ jobs:
         # Clear any conflicting buildozer cache
         rm -rf ~/.buildozer/android/platform/android-ndk-* || true
         
+        # Fix autotools environment for libffi
+        export ACLOCAL_PATH="/usr/share/aclocal"
+        export AUTOCONF_PREFIX="/usr"
+        export LIBTOOLIZE="libtoolize"
+        
+        # Ensure we have the right autotools version
+        autoreconf --version
+        libtoolize --version
+        
         # Verify environment
         echo "=== Environment Check ==="
         echo "Android SDK Root: $ANDROID_SDK_ROOT"
@@ -166,8 +184,22 @@ jobs:
         fi
         
         echo "=== Starting Build ==="
-        # Add verbose flag to see more details
+        
+        # Try clean build first
+        buildozer android clean || true
+        
+        # Add verbose flag to see more details and force single arch
         buildozer -v android debug
+        
+        # If build fails, try with alternative approach
+        if [ $? -ne 0 ]; then
+          echo "=== First build failed, trying alternative approach ==="
+          # Clear everything and try with different environment
+          rm -rf .buildozer || true
+          export P4A_BOOTSTRAP="sdl2"
+          export P4A_ARCH="arm64-v8a"
+          buildozer -v android debug
+        fi
 
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4
