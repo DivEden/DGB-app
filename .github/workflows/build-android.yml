@@ -27,11 +27,11 @@ jobs:
           docker run --rm \
             -v "$PWD":/home/user/hostcwd \
             -v "$PWD/.buildozer_global":/home/user/.buildozer \
-            --workdir /home/user/hostcwd/museum_search_app \
             -e BUILDOZER_WARN_ON_ROOT=0 \
             -e APP_ANDROID_ACCEPT_SDK_LICENSE=1 \
+            --entrypoint /bin/bash \
             kivy/buildozer:latest \
-            buildozer android debug
+            -c "cd /home/user/hostcwd/museum_search_app && /home/user/.venv/bin/buildozer android debug"
 
       - name: Find APK file
         id: find_apk
