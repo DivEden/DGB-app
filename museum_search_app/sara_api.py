@@ -425,10 +425,22 @@ class SaraAPI:
                     # https://sara-api.adlibhosting.com/SARA-011-DGB/wwwopac.ashx?command=getcontent&server=images&value=1568771.jpg
                     if filename.endswith('.jpg') or filename.endswith('.jpeg') or filename.endswith('.png'):
                         image_url = f"https://sara-api.adlibhosting.com/SARA-011-DGB/wwwopac.ashx?command=getcontent&server=images&value={filename}"
-                        # Download med authentication og returner lokal filsti
-                        local_path = self.download_image_with_auth(image_url)
-                        if local_path:
-                            images.append(local_path)
+                        
+                        # Prøv at detectere Android platform
+                        try:
+                            from kivy.utils import platform
+                            is_android = platform == 'android'
+                        except:
+                            is_android = False
+                        
+                        if is_android:
+                            # Android: brug direkte URL - AsyncImage kan håndtere HTTPS
+                            images.append(image_url)
+                        else:
+                            # Desktop: download med authentication og returner lokal filsti
+                            local_path = self.download_image_with_auth(image_url)
+                            if local_path:
+                                images.append(local_path)
         
         return images
     
