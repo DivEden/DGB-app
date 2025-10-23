@@ -70,9 +70,9 @@ class BottomNavigation(BoxLayout):
             padding=[dp(5), dp(3), dp(5), dp(3)]
         )
         
-        # Button background color based on active state
-        bg_color = (0.15, 0.25, 0.4, 1) if is_active else (0.9, 0.9, 0.9, 1)
-        text_color = (1, 1, 1, 1) if is_active else (0.5, 0.5, 0.5, 1)
+        # Button background color - always blue now
+        bg_color = (0.15, 0.25, 0.4, 1)  # Always active blue color
+        text_color = (1, 1, 1, 1)  # Always white text
         
         # Create button
         nav_btn = Button(
@@ -100,7 +100,7 @@ class BottomNavigation(BoxLayout):
         nav_btn.is_active = is_active
         nav_btn.button_text = text
         nav_btn.active_color = (0.15, 0.25, 0.4, 1)
-        nav_btn.inactive_color = (0.9, 0.9, 0.9, 1)
+        nav_btn.inactive_color = (0.15, 0.25, 0.4, 1)  # Same as active color now
         
         return nav_btn
     
@@ -129,12 +129,13 @@ class BottomNavigation(BoxLayout):
             self._deactivate_button(self.home_btn)
     
     def _activate_button(self, button):
-        """Activate a navigation button"""
+        """Activate a navigation button - now both buttons stay blue"""
         button.is_active = True
+        # Keep blue color for all buttons
         button.background_color = button.active_color
         button.color = (1, 1, 1, 1)  # White text
         
-        # Update canvas background
+        # Update canvas background - keep blue
         if hasattr(button, 'bg_rect'):
             with button.canvas.before:
                 Color(*button.active_color)
@@ -142,15 +143,16 @@ class BottomNavigation(BoxLayout):
                 button.bg_rect.size = button.size
     
     def _deactivate_button(self, button):
-        """Deactivate a navigation button"""
+        """Deactivate a navigation button - now both buttons stay blue"""
         button.is_active = False
-        button.background_color = button.inactive_color
-        button.color = (0.5, 0.5, 0.5, 1)  # Gray text
+        # Keep blue color instead of gray
+        button.background_color = button.active_color  # Use active color instead of inactive
+        button.color = (1, 1, 1, 1)  # Keep white text instead of gray
         
-        # Update canvas background
+        # Update canvas background - keep blue
         if hasattr(button, 'bg_rect'):
             with button.canvas.before:
-                Color(*button.inactive_color)
+                Color(*button.active_color)  # Use active color instead of inactive
                 button.bg_rect.pos = button.pos
                 button.bg_rect.size = button.size
     

@@ -76,6 +76,16 @@ class SavedGridItem(BoxLayout):
         
         self.card_container.bind(pos=self._update_bg, size=self._update_bg)
         
+        # Make card clickable for viewing the item
+        def on_card_click(instance, touch):
+            if self.card_container.collide_point(*touch.pos):
+                if self.view_callback:
+                    self.view_callback(self.obj_data)
+                    return True
+            return False
+        
+        self.card_container.bind(on_touch_down=on_card_click)
+        
         self._create_item()
         self.add_widget(self.card_container)
     
