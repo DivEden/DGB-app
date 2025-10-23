@@ -1,26 +1,65 @@
-# Buildozer cache
+# Buildozer cache and mobile build files
 .buildozer/
+bin/
 
-# Python cache
+# Python cache and bytecode
 __pycache__/
 *.pyc
 *.pyo
+*.pyd
+*.pdb
 
 # Virtual environment  
 venv/
 env/
+.env
 
-# Temporary files
+# Kivy specific
+*.kv~
+
+# App specific data files
+recent_searches.json
+saved_items.json
+
+# Temporary files and logs
 *.tmp
 *.log
+*.bak
+*.swp
+*.swo
+*~
+
+# Downloaded images cache
+temp_images/
 
 # IDE files
 .vscode/
 .idea/
+*.sublime-*
 
 # OS files
 .DS_Store
 Thumbs.db
+desktop.ini
 
-# APK output (will be in GitHub Actions artifacts instead)
+# Mobile build outputs
 *.apk
+*.aab
+*.ipa
+
+# Distribution files
+dist/
+build/
+*.egg-info/
+
+# Pytest
+.pytest_cache/
+.coverage
+
+# Windows specific
+*.exe
+*.dll
+
+# Local configuration files that shouldn't be shared
+local_config.py
+config_local.py
