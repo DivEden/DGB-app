@@ -10,6 +10,8 @@ Now with modular architecture:
 - utils/: Data management and utilities
 """
 
+__version__ = "0.1"
+
 import kivy
 kivy.require('2.0.0')
 

@@ -5,205 +5,33 @@ on:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
-  workflow_dispatch:
 
 jobs:
   build-android:
+    name: Build Android APK
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      
-    - name: Set up Python 3.11
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-        
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y \
-          build-essential \
-          git \
-          python3-dev \
-          python3-pip \
-          openjdk-17-jdk \
-          unzip \
-          zlib1g-dev \
-          libncurses5-dev \
-          libncursesw5-dev \
-          libtinfo6 \
-          cmake \
-          libffi-dev \
-          libssl-dev \
-          autoconf \
-          automake \
-          libtool \
-          pkg-config \
-          zip \
-          wget \
-          curl \
-          gettext \
-          texinfo \
-          gperf \
-          m4 \
-          bison \
-          flex
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Install Python dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install buildozer cython==0.29.36
-        # Install specific p4a version that's known to work
-        pip install python-for-android==2024.01.21
+      - name: Build with Buildozer
+        uses: ArtemSBulgakov/buildozer-action@v1
+        id: buildozer
+        with:
+          command: buildozer android debug
+          workdir: museum_search_app
+          buildozer_version: stable
 
-    - name: Setup Android SDK manually
-      run: |
-        # Set up Android SDK
-        export ANDROID_SDK_ROOT=$HOME/android-sdk
-        mkdir -p $ANDROID_SDK_ROOT
-        cd $ANDROID_SDK_ROOT
-        
-        # Download command line tools
-        wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-        unzip -q commandlinetools-linux-11076708_latest.zip
-        ls -la  # Debug: see what was extracted
-        mkdir -p cmdline-tools/latest
-        mv cmdline-tools/* cmdline-tools/latest/ 2>/dev/null || true
-        # Alternative approach if the above fails
-        if [ -d "cmdline-tools" ] && [ ! -f "cmdline-tools/latest/bin/sdkmanager" ]; then
-          rm -rf cmdline-tools
-          mkdir -p cmdline-tools
-          unzip -q commandlinetools-linux-11076708_latest.zip -d temp
-          mv temp/cmdline-tools cmdline-tools/latest
-          rm -rf temp
-        fi
-        
-        # Set up environment
-        export PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH
-        export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-        
-        # Accept all licenses first
-        mkdir -p $ANDROID_SDK_ROOT/licenses
-        echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > $ANDROID_SDK_ROOT/licenses/android-sdk-license
-        echo "84831b9409646a918e30573bab4c9c91346d8abd" > $ANDROID_SDK_ROOT/licenses/android-sdk-preview-license
-        echo "d56f5187479451eabf01fb78af6dfcb131a6481e" > $ANDROID_SDK_ROOT/licenses/android-googletv-license
-        echo "601085b94cd77f0b54ff86406957099ebe79c4d6" > $ANDROID_SDK_ROOT/licenses/android-sdk-preview-license
-        echo "e9acab5b5fbb560a72cfaecce8946896ff6aab9d" > $ANDROID_SDK_ROOT/licenses/mips-android-sysimage-license
-        
-        # Install specific components without prompts
-        sdkmanager --update --verbose
-        sdkmanager "platform-tools" --verbose
-        sdkmanager "platforms;android-31" --verbose  
-        sdkmanager "build-tools;31.0.0" --verbose
-        sdkmanager "ndk;25.2.9519653" --verbose
-        
-        # Verify aidl tool exists and is executable
-        ls -la $ANDROID_SDK_ROOT/build-tools/31.0.0/
-        chmod +x $ANDROID_SDK_ROOT/build-tools/31.0.0/aidl
-        
-        # Set environment variables for later steps
-        echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
-        echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
-        echo "ANDROIDSDK=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
-        echo "ANDROID_NDK_ROOT=$ANDROID_SDK_ROOT/ndk/25.2.9519653" >> $GITHUB_ENV
-        echo "ANDROIDNDK=$ANDROID_SDK_ROOT/ndk/25.2.9519653" >> $GITHUB_ENV
-        echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/25.2.9519653" >> $GITHUB_ENV
-        echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
-        
-        # Override any conflicting system NDK paths
-        echo "ANDROID_NDK=$ANDROID_SDK_ROOT/ndk/25.2.9519653" >> $GITHUB_ENV
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: ${{ steps.buildozer.outputs.filename }}
+          retention-days: 30
 
-    - name: Build Android APK
-      working-directory: .
-      run: |
-        export PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$ANDROID_SDK_ROOT/build-tools/31.0.0:$PATH
-        
-        # Force correct environment variables to override system defaults
-        export ANDROIDAPI="31"
-        export ANDROIDMINAPI="21"
-        export ANDROIDNDK="25b"
-        export ANDROID_SDK_ROOT="/home/runner/android-sdk"
-        export ANDROID_HOME="/home/runner/android-sdk"
-        export ANDROIDSDK="/home/runner/android-sdk"
-        export ANDROID_NDK_ROOT="/home/runner/android-sdk/ndk/25.2.9519653"
-        export ANDROIDNDK="/home/runner/android-sdk/ndk/25.2.9519653"
-        export ANDROID_NDK_HOME="/home/runner/android-sdk/ndk/25.2.9519653"
-        export ANDROID_NDK="/home/runner/android-sdk/ndk/25.2.9519653"
-        
-        # Clear any conflicting buildozer cache
-        rm -rf ~/.buildozer/android/platform/android-ndk-* || true
-        
-        # Fix autotools environment for libffi
-        export ACLOCAL_PATH="/usr/share/aclocal"
-        export AUTOCONF_PREFIX="/usr"
-        export LIBTOOLIZE="libtoolize"
-        
-        # Ensure we have the right autotools version
-        autoreconf --version
-        libtoolize --version
-        
-        # Verify environment
-        echo "=== Environment Check ==="
-        echo "Android SDK Root: $ANDROID_SDK_ROOT"
-        echo "Android Home: $ANDROID_HOME"
-        echo "Java Home: $JAVA_HOME"
-        echo "NDK Root: $ANDROID_NDK_ROOT"
-        echo "Current directory: $(pwd)"
-        echo "Directory contents:"
-        ls -la
-        
-        # Check that buildozer.spec exists
-        if [ ! -f "buildozer.spec" ]; then
-          echo "ERROR: buildozer.spec not found in current directory"
-          exit 1
-        fi
-        
-        # Check that source directory exists
-        if [ ! -d "museum_search_app" ]; then
-          echo "ERROR: museum_search_app directory not found"
-          exit 1
-        fi
-        
-        # Check that main.py exists in source directory
-        if [ ! -f "museum_search_app/main.py" ]; then
-          echo "ERROR: main.py not found in museum_search_app directory"
-          exit 1
-        fi
-        
-        # Check that aidl tool is available
-        which aidl || echo "aidl not in PATH, using direct path"
-        $ANDROID_SDK_ROOT/build-tools/31.0.0/aidl --version 2>/dev/null || echo "Direct aidl test completed"
-        
-        # Check NDK exists
-        if [ ! -d "$ANDROID_NDK_ROOT" ]; then
-          echo "ERROR: NDK not found at $ANDROID_NDK_ROOT"
-          ls -la $ANDROID_SDK_ROOT/ndk/ || echo "No NDK directory found"
-          exit 1
-        fi
-        
-        echo "=== Starting Build ==="
-        
-        # Try clean build first
-        buildozer android clean || true
-        
-        # Add verbose flag to see more details and force single arch
-        buildozer -v android debug
-        
-        # If build fails, try with alternative approach
-        if [ $? -ne 0 ]; then
-          echo "=== First build failed, trying alternative approach ==="
-          # Clear everything and try with different environment
-          rm -rf .buildozer || true
-          export P4A_BOOTSTRAP="sdl2"
-          export P4A_ARCH="arm64-v8a"
-          buildozer -v android debug
-        fi
-
-    - name: Upload APK artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: museum-search-app-debug
-        path: bin/*.apk
-        retention-days: 30
+      - name: Show APK location
+        run: |
+          echo "APK built successfully!"
+          echo "Location: ${{ steps.buildozer.outputs.filename }}"
+          ls -la museum_search_app/bin/ || true
