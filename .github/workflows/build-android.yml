@@ -15,23 +15,71 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up buildozer cache
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Cache buildozer global directory
         uses: actions/cache@v4
         with:
           path: .buildozer_global
-          key: buildozer-${{ hashFiles('buildozer.spec') }}
+          key: buildozer-${{ hashFiles('museum_search_app/buildozer.spec') }}
 
-      - name: Build APK with Docker
+      - name: Install system dependencies
         run: |
-          # Use the official kivy/buildozer Docker image
-          # The image is designed to be used with the entrypoint script
-          docker run --rm \
-            -v "$PWD":/home/user/hostcwd \
-            -v "$PWD/.buildozer_global":/home/user/.buildozer \
-            -e BUILDOZER_WARN_ON_ROOT=0 \
-            -e APP_ANDROID_ACCEPT_SDK_LICENSE=1 \
-            kivy/buildozer:latest \
-            --working-directory museum_search_app android debug
+          sudo apt-get update
+          sudo apt-get install -y \
+            python3-pip \
+            build-essential \
+            git \
+            python3 \
+            python3-dev \
+            ffmpeg \
+            libsdl2-dev \
+            libsdl2-image-dev \
+            libsdl2-mixer-dev \
+            libsdl2-ttf-dev \
+            libportmidi-dev \
+            libswscale-dev \
+            libavformat-dev \
+            libavcodec-dev \
+            zlib1g-dev \
+            libgstreamer1.0 \
+            gstreamer1.0-plugins-base \
+            gstreamer1.0-plugins-good \
+            build-essential \
+            libsqlite3-dev \
+            sqlite3 \
+            bzip2 \
+            libbz2-dev \
+            libssl-dev \
+            openssl \
+            libgdbm-dev \
+            libgdbm-compat-dev \
+            liblzma-dev \
+            libreadline-dev \
+            libncursesw5-dev \
+            libffi-dev \
+            uuid-dev \
+            libffi7 \
+            lld \
+            libtool
+
+      - name: Install Python dependencies
+        run: |
+          pip install buildozer
+          pip install cython==0.29.33
+          pip install kivymd
+          pip install python-for-android
+
+      - name: Build APK
+        working-directory: museum_search_app
+        run: |
+          echo "y" | buildozer android debug
+        env:
+          BUILDOZER_WARN_ON_ROOT: "0"
+          APP_ANDROID_ACCEPT_SDK_LICENSE: "1"
 
       - name: Find APK file
         id: find_apk
