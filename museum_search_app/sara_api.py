@@ -241,6 +241,9 @@ class SaraAPI:
             'department': get_multilang_text('.//institution_name', 'Ukendt afdeling'),
             'classification': get_multilang_text('.//object_category', ''),
             'description': self._extract_description(record),
+            'dating': self._extract_dating(record),
+            'currentLocation': self._extract_current_location(record),
+            'context': self._extract_context(record),
         }
         
         # Kunstner information
@@ -304,6 +307,158 @@ class SaraAPI:
         
         return obj_data
     
+    def _extract_dating(self, record) -> str:
+        """
+        Udtræk datering fra SARA record
+        Henter produktionsdato (når objektet blev lavet), ikke sagsdato
+        
+        Args:
+            record: XML record element
+        
+        Returns:
+            Datering tekst
+        """
+        # Prøv production.date.start og production.date.end (VIGTIGST - objektets alder)
+        prod_date_start = record.find('.//Production_date/production.date.start')
+        prod_date_end = record.find('.//Production_date/production.date.end')
+        
+        if prod_date_start is not None and prod_date_start.text:
+            start = prod_date_start.text.strip()
+            if prod_date_end is not None and prod_date_end.text:
+                end = prod_date_end.text.strip()
+                if start != end:
+                    return f"{start}-{end}"
+            return start
+        
+        # Prøv at finde årstal i titlen (f.eks. "Scrapbog, 1954")
+        title_elem = record.find('.//Title/title/value')
+        if title_elem is not None and title_elem.text:
+            import re
+            # Søg efter 4-cifret årstal i titlen
+            match = re.search(r'\b(1[0-9]{3}|20[0-9]{2})\b', title_elem.text)
+            if match:
+                return match.group(1)
+        
+        # Prøv event.date_from (fra Event sektion)
+        event_date_from = record.find('.//Event/event.date_from')
+        event_date_to = record.find('.//Event/event.date_to')
+        
+        if event_date_from is not None and event_date_from.text:
+            date_from = event_date_from.text.strip()
+            if event_date_to is not None and event_date_to.text:
+                date_to = event_date_to.text.strip()
+                if date_from != date_to:
+                    return f"{date_from}-{date_to}"
+            return date_from
+        
+        return 'Ukendt datering'
+    
+    def _extract_current_location(self, record) -> str:
+        """
+        Udtræk aktuel placering fra SARA record
+        Viser fysisk placeringsnummer (f.eks. 09605, 09810)
+        
+        Args:
+            record: XML record element
+        
+        Returns:
+            Aktuel placering tekst
+        """
+        # Check først om objektet er udlånt
+        loan_out_elem = record.find('.//Loan_out/loan.out.number')
+        if loan_out_elem is not None and loan_out_elem.text:
+            loan_number = loan_out_elem.text.strip()
+            # Check status
+            loan_status_elem = record.find('.//Loan_out/loan.out.status/value')
+            if loan_status_elem is not None and loan_status_elem.text:
+                status = loan_status_elem.text.strip()
+                if 'APPROVED' in status or 'approved' in status:
+                    return f"Udlånt (nr. {loan_number})"
+            return f"Udlånt (lånenr. {loan_number})"
+        
+        # Prøv location.default.name (det primære placeringsnummer)
+        location_name_elem = record.find('.//location.default.name')
+        if location_name_elem is not None and location_name_elem.text and location_name_elem.text.strip():
+            return location_name_elem.text.strip()
+        
+        # Prøv Object_location sektion
+        obj_location_elem = record.find('.//Object_location/current.location')
+        if obj_location_elem is not None and obj_location_elem.text and obj_location_elem.text.strip():
+            return obj_location_elem.text.strip()
+        
+        # Prøv direkte current.location
+        current_loc_elem = record.find('.//current.location')
+        if current_loc_elem is not None and current_loc_elem.text and current_loc_elem.text.strip():
+            return current_loc_elem.text.strip()
+        
+        # Prøv storage.location
+        storage_elem = record.find('.//storage.location')
+        if storage_elem is not None and storage_elem.text and storage_elem.text.strip():
+            return storage_elem.text.strip()
+        
+        # Fallback: Vis institution og samling
+        institution_elem = record.find('.//institution.name/value')
+        collection_elem = record.find('.//collection/value')
+        
+        if institution_elem is not None and institution_elem.text:
+            institution = institution_elem.text.strip()
+            if collection_elem is not None and collection_elem.text:
+                collection = collection_elem.text.strip()
+                return f"{collection}, {institution}"
+            return institution
+        elif collection_elem is not None and collection_elem.text:
+            return f"Samling: {collection_elem.text.strip()}"
+        
+        return 'Placering ikke registreret'
+    
+    def _extract_context(self, record) -> str:
+        """
+        Udtræk kontekst fra SARA record
+        Viser location.default.context (f.eks. "09804/Trige 800/09810")
+        
+        Args:
+            record: XML record element
+        
+        Returns:
+            Kontekst tekst
+        """
+        # Prøv location.default.context (det primære kontekst felt)
+        location_context_elem = record.find('.//location.default.context')
+        if location_context_elem is not None and location_context_elem.text and location_context_elem.text.strip():
+            return location_context_elem.text.strip()
+        
+        # Prøv case.description fra Museumcase (vigtigste kontekst info)
+        case_desc_elem = record.find('.//Museumcase/case.description/value')
+        if case_desc_elem is not None and case_desc_elem.text:
+            return case_desc_elem.text.strip()
+        
+        # Alternativ case.description placering
+        case_desc_elem = record.find('.//case.description')
+        if case_desc_elem is not None and case_desc_elem.text:
+            return case_desc_elem.text.strip()
+        
+        # Prøv case.title fra Museumcase
+        case_title_elem = record.find('.//Museumcase/case.title')
+        if case_title_elem is not None and case_title_elem.text:
+            case_title = case_title_elem.text.strip()
+            # Check også case.place hvis det findes
+            case_place_elem = record.find('.//Museumcase/case.geo.place')
+            if case_place_elem is not None and case_place_elem.text and case_place_elem.text.strip():
+                return f"{case_title} - {case_place_elem.text.strip()}"
+            return case_title
+        
+        # Prøv acquisition.place
+        acq_place_elem = record.find('.//Acquisition/acquisition.place')
+        if acq_place_elem is not None and acq_place_elem.text:
+            return f"Erhvervet fra: {acq_place_elem.text.strip()}"
+        
+        # Prøv acquisition.reason
+        acq_reason_elem = record.find('.//Acquisition/acquisition.reason')
+        if acq_reason_elem is not None and acq_reason_elem.text:
+            return acq_reason_elem.text.strip()
+        
+        return 'Ukendt kontekst'
+
     def _extract_title(self, record) -> str:
         """
         Udtræk titel fra SARA record (baseret på XML struktur vi fandt)
@@ -408,22 +563,26 @@ class SaraAPI:
         reproductions = record.findall('.//Reproduction')
         
         for repro in reproductions:
-            # Find reference og publish flag within samme reproduction
+            # Find reference within samme reproduction
             ref_elem = repro.find('.//reproduction.reference')
-            publish_elem = repro.find('.//reproduction.publish_on_website')
             
             if ref_elem is not None and ref_elem.text:
                 filename = ref_elem.text.strip()
                 
-                # Tjek om det er publiceret (default til True hvis ikke angivet)
-                is_published = True
-                if publish_elem is not None:
-                    is_published = publish_elem.text == 'x'
+                # Check om det skal publiceres (hvis feltet findes)
+                publish_elem = repro.find('.//reproduction.publish_on_website')
                 
-                if is_published:
-                    # SARA getcontent API URL format (baseret på brugerens link)
-                    # https://sara-api.adlibhosting.com/SARA-011-DGB/wwwopac.ashx?command=getcontent&server=images&value=1568771.jpg
-                    if filename.endswith('.jpg') or filename.endswith('.jpeg') or filename.endswith('.png'):
+                # Hvis publish_on_website findes, skal det være 'x' for at publicere
+                # Hvis det ikke findes, publicer alligevel (nogle gamle records mangler feltet)
+                should_publish = True
+                if publish_elem is not None:
+                    should_publish = (publish_elem.text and publish_elem.text.strip() == 'x')
+                
+                if should_publish:
+                    # SARA getcontent API URL format
+                    # Check file extension
+                    lower_filename = filename.lower()
+                    if any(lower_filename.endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tif', '.tiff']):
                         image_url = f"https://sara-api.adlibhosting.com/SARA-011-DGB/wwwopac.ashx?command=getcontent&server=images&value={filename}"
                         
                         # Prøv at detectere Android platform
@@ -665,6 +824,137 @@ class SaraAPI:
         except Exception as e:
             print(f"Forbindelsestest fejl: {e}")
             return False
+    
+    def get_recent_additions(self, limit: int = 10) -> List[Dict]:
+        """
+        Hent seneste tilføjede objekter fra SARA databasen
+        Sorteret efter oprettelsesdato (nyeste først)
+        KUN objekter med billeder
+        
+        Args:
+            limit: Maksimum antal resultater (default 10 for mobil performance)
+        
+        Returns:
+            Liste af senest tilføjede objekter med billeder
+        """
+        try:
+            # Fetch more records to ensure we get enough with images
+            fetch_limit = limit * 5  # Fetch 5x more to filter for images
+            
+            params = {
+                'command': 'search',
+                'database': 'collection',
+                'search': 'all',
+                'limit': fetch_limit,
+                'xmltype': 'grouped'
+            }
+            
+            print(f"SARA API: Fetching {fetch_limit} records for recent additions (need {limit} with images)")
+            
+            response = requests.get(
+                self.base_url,
+                params=params,
+                auth=self.auth,
+                timeout=30
+            )
+            
+            if response.status_code != 200:
+                print(f"SARA API: HTTP {response.status_code}")
+                return []
+            
+            # Parse XML response
+            root = ET.fromstring(response.content)
+            
+            # Get diagnostic info
+            diagnostic = root.find('.//diagnostic')
+            if diagnostic is not None:
+                hits_elem = diagnostic.find('.//hits')
+                hits = int(hits_elem.text) if hits_elem is not None and hits_elem.text else 0
+                print(f"SARA API: Database has {hits} total objects")
+            
+            # Parse objekter fra XML
+            records = root.findall('.//record')
+            
+            objects_with_dates = []
+            for record in records:
+                obj = self._parse_object_record(record)
+                if obj:
+                    # Extract date fields for sorting
+                    obj['@created'] = record.get('created', '')
+                    obj['@modification'] = record.get('modification', '')
+                    
+                    # Try to get modification date from Edit field
+                    edit_elems = record.findall('.//Edit')
+                    if edit_elems:
+                        last_edit = edit_elems[-1]
+                        edit_date = last_edit.find('.//edit.date')
+                        if edit_date is not None and edit_date.text:
+                            obj['last_edit_date'] = edit_date.text
+                    
+                    # Get input date
+                    input_date = record.find('.//input.date')
+                    if input_date is not None and input_date.text:
+                        obj['input_date'] = input_date.text
+                    
+                    objects_with_dates.append(obj)
+            
+            # Client-side sort by date (newest first)
+            objects_with_dates.sort(key=self._get_sort_date, reverse=True)
+            
+            # Filter for objects WITH images only
+            objects_with_images = [obj for obj in objects_with_dates if obj.get('hasImage', False) and obj.get('primaryImage')]
+            
+            print(f"SARA API: Found {len(objects_with_images)} objects with images out of {len(objects_with_dates)} total")
+            
+            # Return requested limit
+            result = objects_with_images[:limit]
+            print(f"SARA API: Returning {len(result)} recent additions with images")
+            return result
+            
+        except ET.ParseError as e:
+            print(f"XML parsing fejl: {e}")
+            return []
+        except Exception as e:
+            print(f"Fejl ved hentning af seneste tilføjelser: {e}")
+            import traceback
+            traceback.print_exc()
+            return []
+    
+    def _get_sort_date(self, obj):
+        """Get sortable date from object for recent additions sorting"""
+        from datetime import datetime
+        
+        # Try different date fields in order of preference
+        # 1. @modification (ISO format)
+        if obj.get('@modification'):
+            try:
+                return datetime.fromisoformat(obj['@modification'].replace('Z', '+00:00'))
+            except:
+                pass
+        
+        # 2. @created (ISO format)
+        if obj.get('@created'):
+            try:
+                return datetime.fromisoformat(obj['@created'].replace('Z', '+00:00'))
+            except:
+                pass
+        
+        # 3. last_edit_date (YYYY-MM-DD format)
+        if obj.get('last_edit_date'):
+            try:
+                return datetime.strptime(obj['last_edit_date'], '%Y-%m-%d')
+            except:
+                pass
+        
+        # 4. input_date
+        if obj.get('input_date'):
+            try:
+                return datetime.strptime(obj['input_date'], '%Y-%m-%d')
+            except:
+                pass
+        
+        # Default to very old date if no date found
+        return datetime(1900, 1, 1)
 
 
 # Test funktion

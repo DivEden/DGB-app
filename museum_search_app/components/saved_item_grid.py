@@ -6,10 +6,11 @@ Displays saved items in a grid format with image thumbnails
 
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.gridlayout import GridLayout
+from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.label import Label
 from kivy.uix.button import Button
 from kivy.uix.image import AsyncImage
-from kivy.graphics import Color, RoundedRectangle
+from kivy.graphics import Color, RoundedRectangle, Line
 from kivy.metrics import dp
 
 
@@ -18,8 +19,8 @@ class SavedItemGrid(GridLayout):
     
     def __init__(self, saved_items=None, remove_callback=None, view_callback=None, **kwargs):
         super().__init__(**kwargs)
-        self.cols = 3  # Three columns like recent searches
-        self.spacing = dp(15)
+        self.cols = 3  # Three columns
+        self.spacing = dp(20)  # Match carousel spacing
         self.size_hint_y = None
         self.bind(minimum_height=self.setter('height'))
         
@@ -43,48 +44,41 @@ class SavedItemGrid(GridLayout):
 
 
 class SavedGridItem(BoxLayout):
-    """Individual grid item for saved objects - styled like recent searches"""
+    """Individual grid item for saved objects - styled like carousel cards"""
     
     def __init__(self, obj_data=None, remove_callback=None, view_callback=None, **kwargs):
         super().__init__(**kwargs)
         self.orientation = 'vertical'
         self.size_hint_y = None
-        self.height = dp(165)  # Similar to recent searches cards
+        self.size_hint_x = None
+        self.width = dp(200)  # Same as carousel cards
+        self.height = dp(220)  # 150 image + 70 text
         self.spacing = dp(0)
-        self.padding = [0, 0, 0, 0]
+        self.padding = [dp(2), dp(2), dp(2), 0]  # Match carousel padding
         
         self.obj_data = obj_data or {}
         self.remove_callback = remove_callback
         self.view_callback = view_callback
+        self.remove_btn = None  # Will be set when button is created
         
-        # Create card container with background
+        # Create card container with white background (no shadow)
         self.card_container = BoxLayout(
             orientation='vertical',
             size_hint_y=None,
-            height=dp(165),
+            height=dp(220),
             spacing=dp(0)
         )
         
-        # Add background similar to recent searches
+        # Add white background with square corners - same as carousel
         with self.card_container.canvas.before:
-            Color(0.98, 0.98, 0.98, 1)
+            Color(1, 1, 1, 1)  # White background
             self.bg_rect = RoundedRectangle(
                 pos=self.card_container.pos,
                 size=self.card_container.size,
-                radius=[12, 12, 12, 12]
+                radius=[dp(0), dp(0), dp(0), dp(0)]  # Square corners
             )
         
         self.card_container.bind(pos=self._update_bg, size=self._update_bg)
-        
-        # Make card clickable for viewing the item
-        def on_card_click(instance, touch):
-            if self.card_container.collide_point(*touch.pos):
-                if self.view_callback:
-                    self.view_callback(self.obj_data)
-                    return True
-            return False
-        
-        self.card_container.bind(on_touch_down=on_card_click)
         
         self._create_item()
         self.add_widget(self.card_container)
@@ -103,44 +97,67 @@ class SavedGridItem(BoxLayout):
         self._create_text_section()
     
     def _create_image_section(self):
-        """Create image section similar to recent searches"""
+        """Create image section same as carousel - 200x150dp with button overlay"""
+        # Use FloatLayout to overlay button on image
+        image_container = FloatLayout(
+            size_hint_y=None,
+            height=dp(150)
+        )
+        
+        # Image section background
         image_section = BoxLayout(
             orientation='vertical',
-            size_hint_y=None,
-            height=dp(110),  # Similar to recent searches
-            spacing=dp(0)
+            size_hint=(1, 1),
+            pos_hint={'x': 0, 'y': 0}
         )
         
         primary_image_url = self.obj_data.get('primaryImage', '')
         has_image = self.obj_data.get('hasImage', False)
         
         if has_image and primary_image_url:
-            # Real image
+            # Real image with cover mode like carousel
             image = AsyncImage(
                 source=primary_image_url,
-                allow_stretch=True,
-                keep_ratio=True
+                fit_mode="cover",
+                size_hint=(1, 1),
+                mipmap=True
             )
             image_section.add_widget(image)
+            
+            # Add rounded corner overlay same as carousel
+            with image_section.canvas.after:
+                Color(1, 1, 1, 1)  # White color
+                image_section.corner_border = Line(
+                    rounded_rectangle=(
+                        image_section.x, 
+                        image_section.y, 
+                        image_section.width, 
+                        image_section.height, 
+                        dp(8)  # radius
+                    ),
+                    width=dp(3)  # Same as carousel
+                )
+            
+            image_section.bind(pos=self._update_image_overlay, size=self._update_image_overlay)
         else:
-            # No image placeholder
+            # No image placeholder with rounded corners
             placeholder_container = BoxLayout(
                 orientation='vertical',
                 size_hint_y=1.0
             )
             
             with placeholder_container.canvas.before:
-                Color(0.95, 0.95, 0.95, 1)
+                Color(0.96, 0.97, 0.98, 1)  # Same as carousel
                 placeholder_container.placeholder_rect = RoundedRectangle(
                     pos=placeholder_container.pos,
                     size=placeholder_container.size,
-                    radius=[12, 12, 0, 0]  # Rounded top corners only
+                    radius=[dp(8), dp(8), dp(8), dp(8)]  # Same as carousel
                 )
             placeholder_container.bind(pos=self._update_placeholder_bg, size=self._update_placeholder_bg)
             
             placeholder_label = Label(
-                text='Intet billede',
-                font_size='11sp',
+                text='No Image',
+                font_size='14sp',
                 color=(0.7, 0.7, 0.7, 1),
                 halign='center',
                 valign='middle'
@@ -148,44 +165,51 @@ class SavedGridItem(BoxLayout):
             placeholder_container.add_widget(placeholder_label)
             image_section.add_widget(placeholder_container)
         
-        # Add small red X button overlay at bottom-right of image section
-        button_overlay = BoxLayout(
-            orientation='vertical',
-            size_hint_y=None,
-            height=dp(30),
-            padding=[0, 0, dp(8), dp(8)]
-        )
+        image_container.add_widget(image_section)
         
-        # Push to bottom
-        button_overlay.add_widget(BoxLayout())
-        
-        # Button container aligned to right
-        button_row = BoxLayout(
-            orientation='horizontal',
-            size_hint_y=None,
-            height=dp(22)
-        )
-        
-        # Spacer to push button to right
-        button_row.add_widget(BoxLayout())
-        
-        # Small red X button
-        remove_btn = Button(
+        # Add circular remove button on top - with custom background
+        self.remove_btn = Button(
             text='×',
             size_hint=(None, None),
-            size=(dp(22), dp(22)),
-            font_size='16sp',
-            background_color=(0.9, 0.2, 0.2, 0.95),
+            size=(dp(28), dp(28)),
+            pos_hint={'right': 0.92, 'top': 0.92},
+            font_size='20sp',
+            background_normal='',
+            background_down='',
+            background_color=(0, 0, 0, 0),  # Transparent, we'll draw custom circle
             color=(1, 1, 1, 1),
             bold=True
         )
-        remove_btn.bind(on_press=lambda x: self._handle_remove())
-        button_row.add_widget(remove_btn)
         
-        button_overlay.add_widget(button_row)
+        # Draw circular background for button
+        with self.remove_btn.canvas.before:
+            Color(0.9, 0.2, 0.2, 0.95)  # Red background
+            self.remove_btn.circle_bg = RoundedRectangle(
+                pos=self.remove_btn.pos,
+                size=self.remove_btn.size,
+                radius=[dp(14), dp(14), dp(14), dp(14)]  # Full radius for circle
+            )
         
-        self.card_container.add_widget(image_section)
-        self.card_container.add_widget(button_overlay)
+        self.remove_btn.bind(pos=self._update_remove_btn_bg, size=self._update_remove_btn_bg)
+        self.remove_btn.bind(on_press=lambda x: self._handle_remove())
+        image_container.add_widget(self.remove_btn)
+        
+        # Add touch handler to image_container to handle clicks
+        def on_container_touch(touch):
+            # Check if touch is on remove button first
+            if self.remove_btn and self.remove_btn.collide_point(*touch.pos):
+                # Let button handle it
+                return self.remove_btn.on_touch_down(touch)
+            # Otherwise, check if touch is on card for viewing
+            elif self.card_container.collide_point(*touch.pos):
+                if self.view_callback:
+                    self.view_callback(self.obj_data)
+                return True
+            return False
+        
+        image_container.on_touch_down = on_container_touch
+        
+        self.card_container.add_widget(image_container)
     
     def _update_placeholder_bg(self, instance, value):
         """Update placeholder background"""
@@ -193,42 +217,51 @@ class SavedGridItem(BoxLayout):
             instance.placeholder_rect.pos = instance.pos
             instance.placeholder_rect.size = instance.size
     
+    def _update_remove_btn_bg(self, instance, value):
+        """Update remove button circular background"""
+        if hasattr(instance, 'circle_bg'):
+            instance.circle_bg.pos = instance.pos
+            instance.circle_bg.size = instance.size
+    
     def _create_text_section(self):
-        """Create text section similar to recent searches"""
+        """Create text section same as carousel"""
         text_section = BoxLayout(
             orientation='vertical',
             size_hint_y=None,
-            height=dp(35),  # Smaller since we have the button overlay
-            padding=[dp(12), dp(4), dp(12), dp(4)],
-            spacing=dp(2)
+            size_hint_x=1,
+            height=dp(70),  # Same as carousel
+            padding=[dp(10), dp(10), dp(10), dp(10)],
+            spacing=dp(4)
         )
         
-        # Title (truncated like recent searches)
-        title_text = self.obj_data.get('title', 'Ingen titel')
-        if len(title_text) > 20:
-            title_text = title_text[:17] + '...'
+        # Title - same style as carousel
+        title_text = self.obj_data.get('title', 'No title')
+        if len(title_text) > 30:
+            title_text = title_text[:27] + '...'
         
         title_label = Label(
             text=title_text,
-            font_size='12sp',
+            font_size='15sp',
             bold=True,
             color=(0.2, 0.2, 0.2, 1),
             halign='center',
             valign='top',
-            text_size=(dp(106), None),  # Same width as recent searches
+            text_size=(dp(180), None),
+            shorten=True,
+            shorten_from='right',
             max_lines=1
         )
         
-        # Subtitle (object number)
-        obj_number = self.obj_data.get('objectNumber', '')
-        if obj_number:
+        # Subtitle (object number) - same style as carousel
+        objektnummer = self.obj_data.get('objectNumber', '')
+        if objektnummer:
             subtitle_label = Label(
-                text=obj_number,
-                font_size='10sp',
-                color=(0.6, 0.6, 0.6, 1),
+                text=objektnummer,
+                font_size='12sp',
+                color=(0.46, 0.46, 0.46, 1),  # #757575
                 halign='center',
                 valign='top',
-                text_size=(dp(106), None)
+                text_size=(dp(180), None)
             )
             text_section.add_widget(title_label)
             text_section.add_widget(subtitle_label)
@@ -236,6 +269,23 @@ class SavedGridItem(BoxLayout):
             text_section.add_widget(title_label)
         
         self.card_container.add_widget(text_section)
+    
+    def _update_placeholder_bg(self, instance, value):
+        """Update placeholder background"""
+        if hasattr(instance, 'placeholder_rect'):
+            instance.placeholder_rect.pos = instance.pos
+            instance.placeholder_rect.size = instance.size
+    
+    def _update_image_overlay(self, instance, value):
+        """Update image overlay border with rounded corners"""
+        if hasattr(instance, 'corner_border'):
+            instance.corner_border.rounded_rectangle = (
+                instance.x,
+                instance.y, 
+                instance.width,
+                instance.height,
+                dp(8)
+            )
     
     def _handle_remove(self):
         """Handle remove button press"""

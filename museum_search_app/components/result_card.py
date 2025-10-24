@@ -48,7 +48,7 @@ class ResultCard(BoxLayout):
         estimated_lines = max(3, len(description) // 50 + 1)
         desc_height = min(dp(120), dp(20 * estimated_lines))
         
-        base_height = dp(200) + desc_height  # Header + info + description + buttons
+        base_height = dp(260) + desc_height  # Header + info (now with 5 fields) + description + buttons
         
         # Add height for images
         has_image = self.obj_data.get('hasImage', False)
@@ -61,16 +61,22 @@ class ResultCard(BoxLayout):
     
     def _create_card(self):
         """Create the complete result card"""
-        # 1. IMAGES SECTION (TOP) - copied from old main.py
+        # 1. IMAGES SECTION (TOP)
         self._create_images_section()
         
-        # 2. HEADER SECTION
-        self._create_header_section()
+        # 2. INFO SECTION (Classification, dating, location, context)
+        self._create_basic_info_section()
         
-        # 3. INFO SECTION
-        self._create_info_section()
+        # 3. TITLE (just above description)
+        self._create_title_section()
         
-        # 4. ACTION BUTTONS (BOTTOM)
+        # 4. OBJECT NUMBER (right after title, before description)
+        self._create_object_number_section()
+        
+        # 5. DESCRIPTION
+        self._create_description_section()
+        
+        # 6. ACTION BUTTONS (BOTTOM)
         self._create_action_buttons()
     
     def _create_images_section(self):
@@ -202,9 +208,22 @@ class ResultCard(BoxLayout):
             
             print(f"Switched from image {old_index + 1} to image {new_index + 1}")
     
-    def _create_header_section(self):
-        """Create header with title only"""
-        # Title
+    def _create_object_number_section(self):
+        """Create object number section (shown right after image)"""
+        obj_num = self.obj_data.get('objectNumber', 'Ukendt')
+        obj_num_label = Label(
+            text=f'Objektnummer: {obj_num}',
+            size_hint_y=None,
+            height=dp(20),
+            font_size='14sp',
+            halign='left',
+            color=(0.4, 0.4, 0.4, 1)
+        )
+        obj_num_label.bind(size=obj_num_label.setter('text_size'))
+        self.add_widget(obj_num_label)
+    
+    def _create_title_section(self):
+        """Create title section"""
         title_label = Label(
             text=self.obj_data.get('title', 'Ingen titel'),
             size_hint_y=None,
@@ -217,35 +236,16 @@ class ResultCard(BoxLayout):
             shorten_from='right'
         )
         title_label.bind(size=title_label.setter('text_size'))
-        
         self.add_widget(title_label)
     
-    def _create_info_section(self):
-        """Create object information section"""
-        # Calculate height based on description length
-        description = self.obj_data.get('description', 'Ingen beskrivelse tilgængelig')
-        estimated_lines = max(3, len(description) // 50 + 1)
-        desc_height = min(dp(120), dp(20 * estimated_lines))
-        total_info_height = dp(60) + desc_height + dp(10)  # Basic info + description + spacing
-        
+    def _create_basic_info_section(self):
+        """Create basic info section (Classification, Dating, Location, Context)"""
         info_layout = BoxLayout(
             orientation='vertical',
             size_hint_y=None,
-            height=total_info_height,
+            height=dp(80),  # 4 fields x 20dp
             spacing=dp(2)
         )
-        
-        # Object number
-        obj_num = self.obj_data.get('objectNumber', 'Ukendt')
-        obj_num_label = Label(
-            text=f'Objektnummer: {obj_num}',
-            size_hint_y=None,
-            height=dp(20),
-            font_size='14sp',
-            halign='left',
-            color=(0.4, 0.4, 0.4, 1)
-        )
-        obj_num_label.bind(size=obj_num_label.setter('text_size'))
         
         # Classification
         classification = self.obj_data.get('classification', 'Ukendt')
@@ -271,7 +271,50 @@ class ResultCard(BoxLayout):
         )
         dating_label.bind(size=dating_label.setter('text_size'))
         
-        # Description - split into bold label and content
+        # Current Location
+        current_location = self.obj_data.get('currentLocation', 'Ukendt')
+        location_label = Label(
+            text=f'Aktuel placering: {current_location}',
+            size_hint_y=None,
+            height=dp(20),
+            font_size='14sp',
+            halign='left',
+            color=(0.4, 0.4, 0.4, 1)
+        )
+        location_label.bind(size=location_label.setter('text_size'))
+        
+        # Context
+        context = self.obj_data.get('context', 'Ukendt')
+        context_label = Label(
+            text=f'Kontekst: {context}',
+            size_hint_y=None,
+            height=dp(20),
+            font_size='14sp',
+            halign='left',
+            color=(0.4, 0.4, 0.4, 1)
+        )
+        context_label.bind(size=context_label.setter('text_size'))
+        
+        info_layout.add_widget(class_label)
+        info_layout.add_widget(dating_label)
+        info_layout.add_widget(location_label)
+        info_layout.add_widget(context_label)
+        self.add_widget(info_layout)
+    
+    def _create_description_section(self):
+        """Create description section"""
+        description = self.obj_data.get('description', 'Ingen beskrivelse tilgængelig')
+        estimated_lines = max(3, len(description) // 50 + 1)
+        desc_height = min(dp(120), dp(20 * estimated_lines))
+        
+        desc_layout = BoxLayout(
+            orientation='vertical',
+            size_hint_y=None,
+            height=desc_height,
+            spacing=dp(2)
+        )
+        
+        # Description label
         desc_label_text = Label(
             text='Beskrivelse:',
             size_hint_y=None,
@@ -283,10 +326,11 @@ class ResultCard(BoxLayout):
         )
         desc_label_text.bind(size=desc_label_text.setter('text_size'))
         
+        # Description content
         desc_content = Label(
             text=description,
             size_hint_y=None,
-            height=desc_height - dp(20),  # Subtract the label height
+            height=desc_height - dp(20),
             font_size='13sp',
             halign='left',
             valign='top',
@@ -295,12 +339,9 @@ class ResultCard(BoxLayout):
         )
         desc_content.bind(size=desc_content.setter('text_size'))
         
-        info_layout.add_widget(obj_num_label)
-        info_layout.add_widget(class_label)
-        info_layout.add_widget(dating_label)
-        info_layout.add_widget(desc_label_text)
-        info_layout.add_widget(desc_content)
-        self.add_widget(info_layout)
+        desc_layout.add_widget(desc_label_text)
+        desc_layout.add_widget(desc_content)
+        self.add_widget(desc_layout)
     
     def _create_action_buttons(self):
         """Create action buttons section"""

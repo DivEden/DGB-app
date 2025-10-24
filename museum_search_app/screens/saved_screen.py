@@ -23,6 +23,17 @@ class SavedScreen(BoxLayout):
         super().__init__(**kwargs)
         self.orientation = 'vertical'
         
+        # Add white background
+        with self.canvas.before:
+            Color(1, 1, 1, 1)  # White background
+            self.bg_rect = RoundedRectangle(
+                pos=self.pos,
+                size=self.size,
+                radius=[0, 0, 0, 0]
+            )
+        
+        self.bind(pos=self._update_bg, size=self._update_bg)
+        
         # Initialize data manager
         self.data_manager = DataManager()
         
@@ -32,6 +43,11 @@ class SavedScreen(BoxLayout):
         
         self._create_layout()
         self.refresh_saved_items()
+    
+    def _update_bg(self, instance, value):
+        """Update background"""
+        self.bg_rect.pos = self.pos
+        self.bg_rect.size = self.size
     
     def _create_layout(self):
         """Create the main layout"""

@@ -32,6 +32,17 @@ class ResultsScreen(Screen):
         """Create the results screen layout"""
         main_layout = BoxLayout(orientation='vertical')
         
+        # Add white background
+        with main_layout.canvas.before:
+            Color(1, 1, 1, 1)  # White background
+            main_layout.bg_rect = RoundedRectangle(
+                pos=main_layout.pos,
+                size=main_layout.size,
+                radius=[0, 0, 0, 0]
+            )
+        
+        main_layout.bind(pos=self._update_main_bg, size=self._update_main_bg)
+        
         # Header with back button
         header_layout = BoxLayout(
             orientation='horizontal',
@@ -103,6 +114,12 @@ class ResultsScreen(Screen):
             instance.bg_rect.pos = instance.pos
             instance.bg_rect.size = instance.size
     
+    def _update_main_bg(self, instance, value):
+        """Update main layout background"""
+        if hasattr(instance, 'bg_rect'):
+            instance.bg_rect.pos = instance.pos
+            instance.bg_rect.size = instance.size
+    
     def show_results(self, results, query):
         """Display search results on this screen"""
         self.results_data = results
@@ -162,7 +179,7 @@ class ResultsScreen(Screen):
             parent = parent.parent
         
         if parent and hasattr(parent, 'current'):
-            print("ResultsScreen: Found screen manager, navigating to home")
-            parent.current = 'home'
+            print("ResultsScreen: Found screen manager, navigating to search")
+            parent.current = 'search'  # Changed from 'home' to 'search'
         else:
             print("ResultsScreen: Could not find screen manager")

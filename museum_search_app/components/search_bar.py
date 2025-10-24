@@ -1,70 +1,102 @@
 #!/usr/bin/env python3
 """
 Search Bar Component for SARA Museum App
-Clean, mobile-optimized search input and button
+Clean, minimalist search bar with icon
 """
 
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.textinput import TextInput
-from kivy.uix.button import Button
+from kivy.uix.image import Image
 from kivy.graphics import Color, RoundedRectangle
-from kivy.metrics import dp
+from kivy.metrics import dp, cm
 
 
 class SearchBar(BoxLayout):
-    """Mobile-optimized search bar with input and button"""
+    """Minimalist search bar with magnifying glass icon"""
     
     def __init__(self, search_callback=None, **kwargs):
         super().__init__(**kwargs)
-        self.orientation = 'vertical'
+        self.orientation = 'horizontal'
         self.size_hint_y = None
-        self.height = dp(60)
-        self.spacing = dp(5)
-        self.padding = [dp(20), dp(10), dp(20), dp(10)]
+        # Height proportional to screen - approximately 0.55cm on a typical phone
+        self.height = dp(35)
+        # Width takes up about 88% of screen width (6.3/7.1 ≈ 0.887)
+        self.size_hint_x = 0.887
+        self.spacing = 0
+        self.padding = [0, 0, 0, 0]
         
         self.search_callback = search_callback
         
         self._create_search_layout()
     
     def _create_search_layout(self):
-        """Create the search input and button layout"""
-        search_layout = BoxLayout(
+        """Create the clean search bar with icon"""
+        # Container with light grey background
+        search_container = BoxLayout(
             orientation='horizontal',
-            size_hint_y=None,
-            height=dp(45),
-            spacing=dp(10)
+            spacing=0,
+            padding=[dp(10), dp(5), dp(10), dp(5)]
         )
         
-        # Create search input - simplified without custom border
+        # Add light grey background - no rounded corners
+        with search_container.canvas.before:
+            Color(0.95, 0.95, 0.95, 1)  # Light grey
+            search_container.bg_rect = RoundedRectangle(
+                pos=search_container.pos,
+                size=search_container.size,
+                radius=[0, 0, 0, 0]  # No rounded corners
+            )
+        
+        search_container.bind(pos=self._update_bg, size=self._update_bg)
+        
+        # Container for icon to center it vertically
+        icon_container = BoxLayout(
+            orientation='vertical',
+            size_hint=(None, 1),
+            width=dp(20)
+        )
+        
+        # Magnifying glass icon - centered vertically
+        icon = Image(
+            source='utils/Images/search.png',
+            size_hint=(1, None),
+            height=dp(20),
+            pos_hint={'center_y': 0.5},
+            allow_stretch=True,
+            keep_ratio=True,
+            mipmap=True  # Better quality scaling
+        )
+        
+        icon_container.add_widget(BoxLayout())  # Top spacer
+        icon_container.add_widget(icon)
+        icon_container.add_widget(BoxLayout())  # Bottom spacer
+        
+        # Create search input - no visible border, transparent background
         self.search_input = TextInput(
-            hint_text='Indtast objektnummer...',
-            font_size='16sp',
-            multiline=False,
-            size_hint_x=0.75,
-            padding=[dp(15), dp(12)]
-        )
-        
-        self.search_input.bind(
-            on_text_validate=self._on_search
-        )
-        print("SearchBar: Created TextInput and bound on_text_validate to _on_search")
-        
-        # Create search button
-        self.search_btn = Button(
-            text='SOG',
-            size_hint_x=0.25,
+            hint_text='Søg...',
+            hint_text_color=(0.6, 0.6, 0.6, 1),
             font_size='14sp',
-            bold=True,
-            color=(1, 1, 1, 1),
-            background_color=(0.15, 0.25, 0.4, 1)
+            multiline=False,
+            size_hint_x=1,
+            padding=[dp(10), dp(5), dp(10), dp(5)],
+            background_color=(0, 0, 0, 0),  # Transparent
+            foreground_color=(0.2, 0.2, 0.2, 1),  # Dark grey text
+            cursor_color=(0.2, 0.2, 0.2, 1),
+            border=(0, 0, 0, 0)  # No border
         )
         
-        self.search_btn.bind(on_release=self._on_search)
-        print("SearchBar: Bound search button on_release to _on_search")
+        self.search_input.bind(on_text_validate=self._on_search)
+        print("SearchBar: Created minimalist search bar")
         
-        search_layout.add_widget(self.search_input)
-        search_layout.add_widget(self.search_btn)
-        self.add_widget(search_layout)
+        search_container.add_widget(icon_container)
+        search_container.add_widget(self.search_input)
+        self.add_widget(search_container)
+    
+    def _update_bg(self, instance, value):
+        """Update background"""
+        if hasattr(instance, 'bg_rect'):
+            instance.bg_rect.pos = instance.pos
+            instance.bg_rect.size = instance.size
     
     def _on_search(self, *args):
         """Handle search button press or enter key"""

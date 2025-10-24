@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Recent Searches Carousel Component for SARA Museum App
-Volt-style card carousel for displaying recent searches
+Recent Additions Component for SARA Museum App
+Displays recently registered/added objects from the SARA database
 """
 
 from kivy.uix.boxlayout import BoxLayout
@@ -10,18 +10,19 @@ from kivy.uix.label import Label
 from kivy.uix.image import AsyncImage
 from kivy.graphics import Color, RoundedRectangle, Line
 from kivy.metrics import dp
+from datetime import datetime
 
 
-class RecentSearchesCarousel(BoxLayout):
-    """Volt-style carousel for displaying recent searches"""
+class RecentAdditionsCarousel(BoxLayout):
+    """Carousel displaying recently added objects from SARA"""
     
     def __init__(self, item_click_callback=None, **kwargs):
         super().__init__(**kwargs)
         self.orientation = 'vertical'
         self.size_hint_y = None
-        self.height = dp(220)  # Reduced from 290dp for smaller cards (109 + 60 + padding)
+        self.height = dp(220)  # Same as recent searches
         self.padding = [0, dp(15), 0, dp(10)]
-        self.spacing = dp(5)  # Reduced spacing between title and carousel
+        self.spacing = dp(5)
         
         self.item_click_callback = item_click_callback
         
@@ -52,11 +53,11 @@ class RecentSearchesCarousel(BoxLayout):
             size_hint_y=None,
             height=dp(30),
             spacing=dp(10),
-            padding=[dp(20), dp(10), dp(20), 0]  # Add horizontal padding
+            padding=[dp(20), dp(10), dp(20), 0]
         )
         
         recent_title = Label(
-            text='Seneste søgninger',
+            text='Seneste tilføjelser',
             size_hint_x=1.0,
             font_size='16sp',
             bold=True,
@@ -67,21 +68,21 @@ class RecentSearchesCarousel(BoxLayout):
         recent_title.bind(size=recent_title.setter('text_size'))
         title_layout.add_widget(recent_title)
         
-        # Carousel scroll view - height to accommodate smaller cards
+        # Carousel scroll view
         self.carousel_scroll = ScrollView(
             size_hint_y=None,
-            height=dp(175),  # Reduced from 240dp (109 image + 60 text + padding)
+            height=dp(175),
             do_scroll_y=False,
             do_scroll_x=True,
             bar_width=dp(0)
         )
         
-        # Carousel layout with padding to prevent clipping
+        # Carousel layout
         self.carousel_layout = BoxLayout(
             orientation='horizontal',
             size_hint_x=None,
-            spacing=dp(15),  # Reduced from 20dp for tighter layout
-            padding=[dp(20), dp(5), dp(20), dp(5)]  # Add padding especially on top
+            spacing=dp(15),
+            padding=[dp(20), dp(5), dp(20), dp(5)]
         )
         self.carousel_layout.bind(minimum_width=self.carousel_layout.setter('width'))
         
@@ -91,15 +92,15 @@ class RecentSearchesCarousel(BoxLayout):
         self.add_widget(title_layout)
         self.add_widget(self.carousel_scroll)
     
-    def update_carousel(self, recent_searches):
-        """Update carousel with recent searches data"""
+    def update_carousel(self, recent_objects):
+        """Update carousel with recent objects data"""
         # Clear existing elements
         self.carousel_layout.clear_widgets()
         
-        if not recent_searches:
-            # Show "no recent searches" message
+        if not recent_objects:
+            # Show "no recent objects" message
             no_recent_label = Label(
-                text='Ingen seneste søgninger endnu\\nSøg efter objekter for at se dem her',
+                text='Ingen nye tilføjelser endnu',
                 size_hint_x=None,
                 width=dp(320),
                 font_size='16sp',
@@ -111,69 +112,96 @@ class RecentSearchesCarousel(BoxLayout):
             self.carousel_layout.add_widget(no_recent_label)
             return
         
-        # Add recent searches to carousel
-        for search_item in recent_searches:
-            card = self._create_carousel_card(search_item)
+        # Sort by creation date (newest first)
+        sorted_objects = self._sort_by_date(recent_objects)
+        
+        # Add recent objects to carousel (max 20)
+        for obj in sorted_objects[:20]:
+            card = self._create_carousel_card(obj)
             self.carousel_layout.add_widget(card)
     
-    def _create_carousel_card(self, search_item):
-        """Create modern card for carousel with subtle shadow and border"""
-        # Card container - fixed width 145dp for 2 cards + peek on phone
-        # Add small padding to prevent clipping by rounded corners
+    def _sort_by_date(self, objects):
+        """Sort objects by creation date (newest first)"""
+        def get_creation_date(obj):
+            # Try @created field first
+            created = obj.get('@created', '')
+            if created:
+                try:
+                    return datetime.fromisoformat(created.replace('Z', '+00:00'))
+                except:
+                    pass
+            
+            # Try input.date as fallback
+            input_date = obj.get('input', {}).get('date', '')
+            if input_date:
+                try:
+                    return datetime.strptime(input_date, '%Y-%m-%d')
+                except:
+                    pass
+            
+            # Return very old date if no date found
+            return datetime(1900, 1, 1)
+        
+        return sorted(objects, key=get_creation_date, reverse=True)
+    
+    def _create_carousel_card(self, obj):
+        """Create card for carousel - same design as recent searches"""
+        # Card container - same size as recent searches
         card_container = BoxLayout(
             orientation='vertical',
             size_hint_x=None,
-            width=dp(145),  # Reduced from 200dp to fit 2 cards + peek
+            width=dp(145),
             spacing=0,
-            padding=[dp(2), dp(2), dp(2), 0]  # Small padding on top and sides
+            padding=[dp(2), dp(2), dp(2), 0]
         )
         
-        # Add card background (no shadow)
+        # Add card background (white, square corners)
         with card_container.canvas.before:
-            # Main card background (white)
             Color(1, 1, 1, 1)
             card_container.card_bg = RoundedRectangle(
                 pos=card_container.pos,
                 size=card_container.size,
-                radius=[dp(0), dp(0), dp(0), dp(0)]  # Square corners
+                radius=[dp(0), dp(0), dp(0), dp(0)]
             )
         
         card_container.bind(pos=self._update_card_container_bg, size=self._update_card_container_bg)
         
-        # Image section - fixed size 145x109dp (4:3 aspect ratio)
+        # Image section
         image_section = BoxLayout(
             orientation='vertical',
             size_hint_y=None,
-            height=dp(109)  # 145 * 3/4 for 4:3 aspect
+            height=dp(109)
         )
         
-        if search_item.get('hasImage') and search_item.get('primaryImage'):
+        # Get image URL
+        image_url = self._get_image_url(obj)
+        
+        if image_url:
             image = AsyncImage(
-                source=search_item['primaryImage'],
-                fit_mode="cover",  # Cover to fill entire space and maintain consistent size
+                source=image_url,
+                fit_mode="cover",
                 size_hint=(1, 1),
                 mipmap=True
             )
             image_section.add_widget(image)
             
-            # Add rounded corner overlay - draw only in corners to avoid visible lines
+            # Add rounded corner overlay
             with image_section.canvas.after:
-                Color(1, 1, 1, 1)  # White to match card background
-                # Create rounded border effect with minimal visibility
+                Color(1, 1, 1, 1)
                 image_section.corner_border = Line(
                     rounded_rectangle=(
                         image_section.x, 
                         image_section.y, 
                         image_section.width, 
                         image_section.height, 
-                        dp(8)  # radius
+                        dp(8)
                     ),
-                    width=dp(3)  # Moderate width for corner coverage
+                    width=dp(2)
                 )
             
             image_section.bind(pos=self._update_image_overlay, size=self._update_image_overlay)
         else:
-            # Placeholder with rounded corners
+            # Placeholder
             placeholder_container = BoxLayout(orientation='vertical')
             
             with placeholder_container.canvas.before:
@@ -181,7 +209,7 @@ class RecentSearchesCarousel(BoxLayout):
                 placeholder_container.placeholder_bg = RoundedRectangle(
                     pos=placeholder_container.pos,
                     size=placeholder_container.size,
-                    radius=[dp(8), dp(8), dp(8), dp(8)]  # Rounded corners on all sides
+                    radius=[dp(8), dp(8), dp(8), dp(8)]
                 )
             
             placeholder_container.bind(pos=self._update_placeholder_bg, size=self._update_placeholder_bg)
@@ -196,44 +224,44 @@ class RecentSearchesCarousel(BoxLayout):
             placeholder_container.add_widget(placeholder_label)
             image_section.add_widget(placeholder_container)
         
-        # Text section - padding 8-12px, no separate background (uses card background)
+        # Text section
         text_section = BoxLayout(
             orientation='vertical',
             size_hint_y=None,
             size_hint_x=1,
-            height=dp(60),  # Reduced from 70dp for smaller cards
+            height=dp(60),
             padding=[dp(8), dp(8), dp(8), dp(8)],
             spacing=dp(3)
         )
         
-        # Title - 14-16px semibold, max 1 line with ellipsis
-        title_text = search_item.get('title', 'No title')
+        # Get title
+        title_text = self._get_title(obj)
         if len(title_text) > 22:
             title_text = title_text[:19] + '...'
         
         title_label = Label(
             text=title_text,
-            font_size='13sp',  # Slightly smaller for smaller cards
+            font_size='13sp',
             bold=True,
             color=(0.2, 0.2, 0.2, 1),
             halign='center',
             valign='top',
-            text_size=(dp(130), None),  # Reduced from 180dp
+            text_size=(dp(130), None),
             shorten=True,
             shorten_from='right',
             max_lines=1
         )
         
-        # Subtitle (object number if available) - 12-13px, color #757575
-        objektnummer = search_item.get('objectNumber', '')
-        if objektnummer:
+        # Get object number
+        obj_number = self._get_object_number(obj)
+        if obj_number:
             subtitle_label = Label(
-                text=objektnummer,
-                font_size='11sp',  # Slightly smaller
-                color=(0.46, 0.46, 0.46, 1),  # #757575
+                text=obj_number,
+                font_size='11sp',
+                color=(0.46, 0.46, 0.46, 1),
                 halign='center',
                 valign='top',
-                text_size=(dp(130), None)  # Reduced from 180dp
+                text_size=(dp(130), None)
             )
             text_section.add_widget(title_label)
             text_section.add_widget(subtitle_label)
@@ -244,24 +272,51 @@ class RecentSearchesCarousel(BoxLayout):
         card_container.add_widget(image_section)
         card_container.add_widget(text_section)
         
-        # Make card clickable - using the old working approach
+        # Make card clickable
         def on_card_click(touch):
-            print(f"Carousel card clicked! Touch: {touch.pos}")
             if card_container.collide_point(*touch.pos):
-                print(f"Carousel: Touch collision detected for item: {search_item.get('title', 'Unknown')}")
                 if self.item_click_callback:
-                    print("Carousel: Calling item_click_callback")
-                    self.item_click_callback(search_item)
-                else:
-                    print("Carousel: No item_click_callback set!")
+                    self.item_click_callback(obj)
                 return True
-            else:
-                print("Carousel: Touch outside card bounds")
             return False
         
         card_container.on_touch_down = on_card_click
         
         return card_container
+    
+    def _get_image_url(self, obj):
+        """Extract image URL from object data"""
+        # Try to get image from Reproduction field
+        reproduction = obj.get('Reproduction', [])
+        if reproduction and len(reproduction) > 0:
+            ref = reproduction[0].get('reproduction.reference', {}).get('spans', [])
+            if ref and len(ref) > 0:
+                return ref[0].get('text', '')
+        
+        # Fallback to primaryImage if available
+        return obj.get('primaryImage', '')
+    
+    def _get_title(self, obj):
+        """Extract title from object data"""
+        # Try Title field first
+        title_field = obj.get('Title', [])
+        if title_field and len(title_field) > 0:
+            title_value = title_field[0].get('title.value', {}).get('spans', [])
+            if title_value and len(title_value) > 0:
+                return title_value[0].get('text', 'No title')
+        
+        # Fallback to title if available
+        return obj.get('title', 'No title')
+    
+    def _get_object_number(self, obj):
+        """Extract object number from object data"""
+        # Try object_number field
+        obj_num = obj.get('object_number', {}).get('spans', [])
+        if obj_num and len(obj_num) > 0:
+            return obj_num[0].get('text', '')
+        
+        # Fallback to objectNumber
+        return obj.get('objectNumber', '')
     
     def _update_divider_bg(self, instance, value):
         """Update divider line"""
