@@ -109,8 +109,8 @@ class DetailScreen(Screen):
         # 3. Basic info cards at the bottom (classification, dating, location, context)
         self.add_basic_info_cards(content_layout)
         
-        # 4. Save button
-        self.add_save_button(content_layout)
+        # 4. Save button - TODO: implement
+        # self.add_save_button(content_layout)
         
         scroll.add_widget(content_layout)
         main_layout.add_widget(scroll)

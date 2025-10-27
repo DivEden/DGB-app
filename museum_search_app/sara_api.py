@@ -585,27 +585,17 @@ class SaraAPI:
                     if any(lower_filename.endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tif', '.tiff']):
                         image_url = f"https://sara-api.adlibhosting.com/SARA-011-DGB/wwwopac.ashx?command=getcontent&server=images&value={filename}"
                         
-                        # Prøv at detectere Android platform
-                        try:
-                            from kivy.utils import platform
-                            is_android = platform == 'android'
-                        except:
-                            is_android = False
-                        
-                        if is_android:
-                            # Android: brug direkte URL - AsyncImage kan håndtere HTTPS
-                            images.append(image_url)
-                        else:
-                            # Desktop: download med authentication og returner lokal filsti
-                            local_path = self.download_image_with_auth(image_url)
-                            if local_path:
-                                images.append(local_path)
+                        # Download med authentication - virker både på desktop og Android
+                        local_path = self.download_image_with_auth(image_url)
+                        if local_path:
+                            images.append(local_path)
         
         return images
     
     def download_image_with_auth(self, image_url: str) -> Optional[str]:
         """
         Download billede med authentication og returner lokal filsti
+        Virker både på desktop og Android
         
         Args:
             image_url: URL til billede der skal downloades
@@ -623,12 +613,25 @@ class SaraAPI:
             filename_from_url = os.path.basename(image_url.split('value=')[1]) if 'value=' in image_url else 'image.jpg'
             safe_filename = f"{url_hash}_{filename_from_url}"
             
-            # Temp mappe
-            temp_dir = tempfile.gettempdir()
-            local_path = os.path.join(temp_dir, safe_filename)
+            # Find den rigtige cache mappe - både desktop og Android
+            try:
+                from kivy.utils import platform
+                if platform == 'android':
+                    # På Android, brug app's cache directory
+                    from android.storage import app_storage_path
+                    cache_dir = app_storage_path()
+                else:
+                    # På desktop, brug temp directory
+                    cache_dir = tempfile.gettempdir()
+            except:
+                # Fallback til temp directory
+                cache_dir = tempfile.gettempdir()
+            
+            local_path = os.path.join(cache_dir, safe_filename)
             
             # Tjek om vi allerede har downloaded det
             if os.path.exists(local_path):
+                print(f"Using cached image: {safe_filename}")
                 return local_path
             
             # Lav request med authentication
@@ -640,18 +643,21 @@ class SaraAPI:
             request.add_header("Authorization", f"Basic {auth_bytes.decode('ascii')}")
             
             # Download billedet
-            response = urllib.request.urlopen(request)
+            print(f"Downloading image: {image_url}")
+            response = urllib.request.urlopen(request, timeout=10)
             image_data = response.read()
             
             # Gem til lokal fil
             with open(local_path, 'wb') as f:
                 f.write(image_data)
             
-            print(f"Downloaded image: {safe_filename}")
+            print(f"Downloaded and saved image: {safe_filename} ({len(image_data)} bytes)")
             return local_path
             
         except Exception as e:
             print(f"Fejl ved download af billede {image_url}: {e}")
+            import traceback
+            traceback.print_exc()
             return None
     
     def _extract_year(self, date_string: str) -> int:
