@@ -85,6 +85,8 @@ class ResultCard(BoxLayout):
         additional_images = self.obj_data.get('additionalImages', [])
         has_image = self.obj_data.get('hasImage', False)
         
+        print(f"DEBUG result_card: has_image={has_image}, primary_image_url='{primary_image_url}'")
+        
         if has_image and primary_image_url:
             # Build complete images list (primary + additional)
             self.all_images = [primary_image_url] + additional_images
@@ -99,6 +101,7 @@ class ResultCard(BoxLayout):
             )
             
             # Main image - stored as instance variable for updating
+            print(f"DEBUG result_card: Creating AsyncImage with source: {self.all_images[self.current_image_index]}")
             self.main_image_widget = AsyncImage(
                 source=self.all_images[self.current_image_index],
                 size_hint_y=None,

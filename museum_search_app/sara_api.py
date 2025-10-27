@@ -561,30 +561,48 @@ class SaraAPI:
         
         # Find Reproduction elementer
         reproductions = record.findall('.//Reproduction')
+        print(f"DEBUG _extract_images: Found {len(reproductions)} Reproduction elements")
         
-        for repro in reproductions:
+        for idx, repro in enumerate(reproductions, 1):
             # Find reference og publish flag within samme reproduction
             ref_elem = repro.find('.//reproduction.reference')
             publish_elem = repro.find('.//reproduction.publish_on_website')
             
             if ref_elem is not None and ref_elem.text:
                 filename = ref_elem.text.strip()
+                print(f"DEBUG _extract_images: Reproduction #{idx}: filename='{filename}'")
                 
                 # Tjek om det er publiceret (default til True hvis ikke angivet)
                 is_published = True
                 if publish_elem is not None:
                     is_published = publish_elem.text == 'x'
+                    print(f"DEBUG _extract_images: publish_on_website='{publish_elem.text}' -> is_published={is_published}")
+                else:
+                    print(f"DEBUG _extract_images: No publish_on_website element, defaulting to published")
                 
                 if is_published:
                     # SARA getcontent API URL format (baseret på brugerens link)
                     # https://sara-api.adlibhosting.com/SARA-011-DGB/wwwopac.ashx?command=getcontent&server=images&value=1568771.jpg
-                    if filename.endswith('.jpg') or filename.endswith('.jpeg') or filename.endswith('.png'):
+                    # Accept both lowercase and uppercase extensions
+                    filename_lower = filename.lower()
+                    if filename_lower.endswith('.jpg') or filename_lower.endswith('.jpeg') or filename_lower.endswith('.png'):
                         image_url = f"https://sara-api.adlibhosting.com/SARA-011-DGB/wwwopac.ashx?command=getcontent&server=images&value={filename}"
+                        print(f"DEBUG _extract_images: Downloading from {image_url}")
                         # Download med authentication og returner lokal filsti
                         local_path = self.download_image_with_auth(image_url)
                         if local_path:
+                            print(f"DEBUG _extract_images: SUCCESS - local path: {local_path}")
                             images.append(local_path)
+                        else:
+                            print(f"DEBUG _extract_images: FAILED to download")
+                    else:
+                        print(f"DEBUG _extract_images: Skipping (not jpg/jpeg/png): {filename}")
+                else:
+                    print(f"DEBUG _extract_images: Skipping (not published): {filename}")
+            else:
+                print(f"DEBUG _extract_images: Reproduction #{idx}: No filename found")
         
+        print(f"DEBUG _extract_images: Total images collected: {len(images)}")
         return images
     
     def download_image_with_auth(self, image_url: str) -> Optional[str]:
@@ -605,45 +623,32 @@ class SaraAPI:
         try:
             # Lav et unikt filnavn baseret på URL
             url_hash = hashlib.md5(image_url.encode()).hexdigest()[:8]
-            
-            # Sikker udtrækning af filnavn fra URL
-            try:
-                filename_from_url = os.path.basename(image_url.split('value=')[1])
-            except (IndexError, AttributeError):
-                filename_from_url = 'image.jpg'
-            
+            filename_from_url = os.path.basename(image_url.split('value=')[1]) if 'value=' in image_url else 'image.jpg'
             safe_filename = f"{url_hash}_{filename_from_url}"
             
             # Find den rigtige cache mappe - både desktop og Android
-            cache_dir = None
-            
-            # Prøv Android først
             try:
                 from kivy.utils import platform
                 if platform == 'android':
-                    try:
-                        from android.storage import app_storage_path
-                        cache_dir = app_storage_path()
-                        print(f"Using Android app storage: {cache_dir}")
-                    except ImportError as e:
-                        print(f"Warning: Could not import android.storage: {e}")
-            except ImportError:
-                pass  # Ikke på Android eller kivy ikke tilgængelig
-            
-            # Fallback til temp directory hvis Android fejlede eller ikke på Android
-            if cache_dir is None:
+                    # På Android, brug app's cache directory
+                    from android.storage import app_storage_path
+                    cache_dir = app_storage_path()
+                else:
+                    # På desktop, brug temp directory
+                    cache_dir = tempfile.gettempdir()
+            except:
+                # Fallback til temp directory
                 cache_dir = tempfile.gettempdir()
-                print(f"Using temp directory: {cache_dir}")
-            
-            # Sikre at cache directory eksisterer
-            os.makedirs(cache_dir, exist_ok=True)
             
             local_path = os.path.join(cache_dir, safe_filename)
             
             # Tjek om vi allerede har downloaded det
             if os.path.exists(local_path):
                 print(f"Using cached image: {safe_filename}")
-                return local_path
+                # Konverter Windows-sti til format som Kivy/AsyncImage kan læse
+                local_path_normalized = local_path.replace('\\', '/')
+                print(f"Returning cached normalized path: {local_path_normalized}")
+                return local_path_normalized
             
             # Lav request med authentication
             request = urllib.request.Request(image_url)
@@ -654,31 +659,24 @@ class SaraAPI:
             request.add_header("Authorization", f"Basic {auth_bytes.decode('ascii')}")
             
             # Download billedet
-            print(f"Downloading image from: {image_url}")
+            print(f"Downloading image: {image_url}")
             response = urllib.request.urlopen(request, timeout=10)
             image_data = response.read()
-            
-            # Valider at vi faktisk fik data
-            if not image_data or len(image_data) == 0:
-                print(f"Error: Empty image data received")
-                return None
             
             # Gem til lokal fil
             with open(local_path, 'wb') as f:
                 f.write(image_data)
             
-            # Verificer at filen blev gemt korrekt
-            if os.path.exists(local_path) and os.path.getsize(local_path) > 0:
-                print(f"Successfully downloaded and saved: {safe_filename} ({len(image_data)} bytes)")
-                return local_path
-            else:
-                print(f"Error: File was not saved correctly: {local_path}")
-                return None
+            print(f"Downloaded and saved image: {safe_filename} ({len(image_data)} bytes)")
+            
+            # Konverter Windows-sti til format som Kivy/AsyncImage kan læse
+            # Kivy foretrækker forward slashes på alle platforme
+            local_path_normalized = local_path.replace('\\', '/')
+            print(f"Returning normalized path: {local_path_normalized}")
+            return local_path_normalized
             
         except Exception as e:
-            print(f"Error downloading image from {image_url}: {e}")
-            import traceback
-            traceback.print_exc()
+            print(f"Error downloading image: {e}")
             return None
     
     def _extract_year(self, date_string: str) -> int:
