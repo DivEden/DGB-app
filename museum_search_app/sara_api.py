@@ -563,29 +563,24 @@ class SaraAPI:
         reproductions = record.findall('.//Reproduction')
         
         for repro in reproductions:
-            # Find reference within samme reproduction
+            # Find reference og publish flag within samme reproduction
             ref_elem = repro.find('.//reproduction.reference')
+            publish_elem = repro.find('.//reproduction.publish_on_website')
             
             if ref_elem is not None and ref_elem.text:
                 filename = ref_elem.text.strip()
                 
-                # Check om det skal publiceres (hvis feltet findes)
-                publish_elem = repro.find('.//reproduction.publish_on_website')
-                
-                # Hvis publish_on_website findes, skal det være 'x' for at publicere
-                # Hvis det ikke findes, publicer alligevel (nogle gamle records mangler feltet)
-                should_publish = True
+                # Tjek om det er publiceret (default til True hvis ikke angivet)
+                is_published = True
                 if publish_elem is not None:
-                    should_publish = (publish_elem.text and publish_elem.text.strip() == 'x')
+                    is_published = publish_elem.text == 'x'
                 
-                if should_publish:
-                    # SARA getcontent API URL format
-                    # Check file extension
-                    lower_filename = filename.lower()
-                    if any(lower_filename.endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tif', '.tiff']):
+                if is_published:
+                    # SARA getcontent API URL format (baseret på brugerens link)
+                    # https://sara-api.adlibhosting.com/SARA-011-DGB/wwwopac.ashx?command=getcontent&server=images&value=1568771.jpg
+                    if filename.endswith('.jpg') or filename.endswith('.jpeg') or filename.endswith('.png'):
                         image_url = f"https://sara-api.adlibhosting.com/SARA-011-DGB/wwwopac.ashx?command=getcontent&server=images&value={filename}"
-                        
-                        # Download med authentication - virker både på desktop og Android
+                        # Download med authentication og returner lokal filsti
                         local_path = self.download_image_with_auth(image_url)
                         if local_path:
                             images.append(local_path)
