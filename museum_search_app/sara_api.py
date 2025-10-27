@@ -605,22 +605,38 @@ class SaraAPI:
         try:
             # Lav et unikt filnavn baseret på URL
             url_hash = hashlib.md5(image_url.encode()).hexdigest()[:8]
-            filename_from_url = os.path.basename(image_url.split('value=')[1]) if 'value=' in image_url else 'image.jpg'
+            
+            # Sikker udtrækning af filnavn fra URL
+            try:
+                filename_from_url = os.path.basename(image_url.split('value=')[1])
+            except (IndexError, AttributeError):
+                filename_from_url = 'image.jpg'
+            
             safe_filename = f"{url_hash}_{filename_from_url}"
             
             # Find den rigtige cache mappe - både desktop og Android
+            cache_dir = None
+            
+            # Prøv Android først
             try:
                 from kivy.utils import platform
                 if platform == 'android':
-                    # På Android, brug app's cache directory
-                    from android.storage import app_storage_path
-                    cache_dir = app_storage_path()
-                else:
-                    # På desktop, brug temp directory
-                    cache_dir = tempfile.gettempdir()
-            except:
-                # Fallback til temp directory
+                    try:
+                        from android.storage import app_storage_path
+                        cache_dir = app_storage_path()
+                        print(f"Using Android app storage: {cache_dir}")
+                    except ImportError as e:
+                        print(f"Warning: Could not import android.storage: {e}")
+            except ImportError:
+                pass  # Ikke på Android eller kivy ikke tilgængelig
+            
+            # Fallback til temp directory hvis Android fejlede eller ikke på Android
+            if cache_dir is None:
                 cache_dir = tempfile.gettempdir()
+                print(f"Using temp directory: {cache_dir}")
+            
+            # Sikre at cache directory eksisterer
+            os.makedirs(cache_dir, exist_ok=True)
             
             local_path = os.path.join(cache_dir, safe_filename)
             
@@ -638,19 +654,29 @@ class SaraAPI:
             request.add_header("Authorization", f"Basic {auth_bytes.decode('ascii')}")
             
             # Download billedet
-            print(f"Downloading image: {image_url}")
+            print(f"Downloading image from: {image_url}")
             response = urllib.request.urlopen(request, timeout=10)
             image_data = response.read()
+            
+            # Valider at vi faktisk fik data
+            if not image_data or len(image_data) == 0:
+                print(f"Error: Empty image data received")
+                return None
             
             # Gem til lokal fil
             with open(local_path, 'wb') as f:
                 f.write(image_data)
             
-            print(f"Downloaded and saved image: {safe_filename} ({len(image_data)} bytes)")
-            return local_path
+            # Verificer at filen blev gemt korrekt
+            if os.path.exists(local_path) and os.path.getsize(local_path) > 0:
+                print(f"Successfully downloaded and saved: {safe_filename} ({len(image_data)} bytes)")
+                return local_path
+            else:
+                print(f"Error: File was not saved correctly: {local_path}")
+                return None
             
         except Exception as e:
-            print(f"Fejl ved download af billede {image_url}: {e}")
+            print(f"Error downloading image from {image_url}: {e}")
             import traceback
             traceback.print_exc()
             return None
