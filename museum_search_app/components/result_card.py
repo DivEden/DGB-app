@@ -85,8 +85,6 @@ class ResultCard(BoxLayout):
         additional_images = self.obj_data.get('additionalImages', [])
         has_image = self.obj_data.get('hasImage', False)
         
-        print(f"DEBUG result_card: has_image={has_image}, primary_image_url='{primary_image_url}'")
-        
         if has_image and primary_image_url:
             # Build complete images list (primary + additional)
             self.all_images = [primary_image_url] + additional_images
@@ -101,7 +99,6 @@ class ResultCard(BoxLayout):
             )
             
             # Main image - stored as instance variable for updating
-            print(f"DEBUG result_card: Creating AsyncImage with source: {self.all_images[self.current_image_index]}")
             self.main_image_widget = AsyncImage(
                 source=self.all_images[self.current_image_index],
                 size_hint_y=None,
@@ -242,66 +239,47 @@ class ResultCard(BoxLayout):
         self.add_widget(title_label)
     
     def _create_basic_info_section(self):
-        """Create basic info section (Classification, Dating, Location, Context)"""
+        """Create basic info section with all new fields"""
         info_layout = BoxLayout(
             orientation='vertical',
             size_hint_y=None,
-            height=dp(80),  # 4 fields x 20dp
             spacing=dp(2)
         )
         
-        # Classification
-        classification = self.obj_data.get('classification', 'Ukendt')
-        class_label = Label(
-            text=f'Klassifikation: {classification}',
-            size_hint_y=None,
-            height=dp(20),
-            font_size='14sp',
-            halign='left',
-            color=(0.4, 0.4, 0.4, 1)
-        )
-        class_label.bind(size=class_label.setter('text_size'))
+        # All fields to display - with the new ones included
+        fields_to_show = [
+            ('Klassifikation', self.obj_data.get('classification', '')),
+            ('Datering', self.obj_data.get('dating', '')),
+            ('Placering (navn)', self.obj_data.get('location_name', '')),
+            ('Placering (kontekst)', self.obj_data.get('location_context', '')),
+            ('Accession nr.', self.obj_data.get('acquisition_number', '')),
+            ('Giver', self.obj_data.get('acquisition_source', '')),
+            ('Begrundelse', self.obj_data.get('acquisition_reason', '')),
+            ('Erhvervelsesdato', self.obj_data.get('acquisition_date', '')),
+            ('Proveniens-type', self.obj_data.get('event_type', '')),
+            ('Proveniens-betegnelse', self.obj_data.get('event_name', '')),
+            ('Proveniens-beskrivelse', self.obj_data.get('event_description', '')),
+            ('Ophavsmand', self.obj_data.get('craftsman', ''))
+        ]
         
-        # Dating
-        dating = self.obj_data.get('dating', 'Ukendt')
-        dating_label = Label(
-            text=f'Datering: {dating}',
-            size_hint_y=None,
-            height=dp(20),
-            font_size='14sp',
-            halign='left',
-            color=(0.4, 0.4, 0.4, 1)
-        )
-        dating_label.bind(size=dating_label.setter('text_size'))
+        displayed_fields = 0
+        for field_name, field_value in fields_to_show:
+            if field_value and field_value.strip():  # Only show non-empty fields
+                field_label = Label(
+                    text=f'{field_name}: {field_value}',
+                    size_hint_y=None,
+                    height=dp(20),
+                    font_size='14sp',
+                    halign='left',
+                    color=(0.4, 0.4, 0.4, 1)
+                )
+                field_label.bind(size=field_label.setter('text_size'))
+                info_layout.add_widget(field_label)
+                displayed_fields += 1
         
-        # Current Location
-        current_location = self.obj_data.get('currentLocation', 'Ukendt')
-        location_label = Label(
-            text=f'Aktuel placering: {current_location}',
-            size_hint_y=None,
-            height=dp(20),
-            font_size='14sp',
-            halign='left',
-            color=(0.4, 0.4, 0.4, 1)
-        )
-        location_label.bind(size=location_label.setter('text_size'))
+        # Set dynamic height based on displayed fields
+        info_layout.height = dp(max(20, displayed_fields * 22))
         
-        # Context
-        context = self.obj_data.get('context', 'Ukendt')
-        context_label = Label(
-            text=f'Kontekst: {context}',
-            size_hint_y=None,
-            height=dp(20),
-            font_size='14sp',
-            halign='left',
-            color=(0.4, 0.4, 0.4, 1)
-        )
-        context_label.bind(size=context_label.setter('text_size'))
-        
-        info_layout.add_widget(class_label)
-        info_layout.add_widget(dating_label)
-        info_layout.add_widget(location_label)
-        info_layout.add_widget(context_label)
         self.add_widget(info_layout)
     
     def _create_description_section(self):

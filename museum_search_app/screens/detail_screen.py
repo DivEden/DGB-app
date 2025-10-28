@@ -94,7 +94,7 @@ class DetailScreen(Screen):
         scroll = ScrollView()
         content_layout = BoxLayout(
             orientation='vertical',
-            spacing=dp(20),
+            spacing=dp(12),
             size_hint_y=None,
             padding=[dp(20), dp(20), dp(20), dp(20)]
         )
@@ -109,8 +109,11 @@ class DetailScreen(Screen):
         # 3. Basic info cards at the bottom (classification, dating, location, context)
         self.add_basic_info_cards(content_layout)
         
-        # 4. Save button - TODO: implement
-        # self.add_save_button(content_layout)
+        # 4. NEW FIELDS CARDS - dedicated cards for the new API fields
+        self.add_new_fields_cards(content_layout)
+        
+        # 5. Save button 
+        self.add_save_button(content_layout)
         
         scroll.add_widget(content_layout)
         main_layout.add_widget(scroll)
@@ -289,33 +292,33 @@ class DetailScreen(Screen):
         
         card_container.bind(pos=self._update_card_bg, size=self._update_card_bg)
         
-        # Title with small label
+        # Title with improved styling
         title_section = BoxLayout(
             orientation='vertical',
             size_hint_y=None,
-            height=dp(30),
-            spacing=dp(2)
+            height=dp(28),
+            spacing=dp(3)
         )
         
         title_label_small = Label(
             text='Titel:',
             size_hint_y=None,
-            height=dp(15),
-            font_size='12sp',
+            height=dp(12),
+            font_size='11sp',
             bold=True,
             halign='left',
-            color=(0.5, 0.5, 0.5, 1)
+            color=(0.45, 0.45, 0.45, 1)
         )
         title_label_small.bind(size=title_label_small.setter('text_size'))
         
         title_value = Label(
             text=obj.get('title', 'Ingen titel'),
             size_hint_y=None,
-            height=dp(15),
-            font_size='12sp',
+            height=dp(16),
+            font_size='13sp',
             bold=False,
             halign='left',
-            color=(0.3, 0.3, 0.3, 1)
+            color=(0.2, 0.2, 0.2, 1)
         )
         title_value.bind(size=title_value.setter('text_size'))
         
@@ -323,22 +326,22 @@ class DetailScreen(Screen):
         title_section.add_widget(title_value)
         card_container.add_widget(title_section)
         
-        # Object number with small label
+        # Object number with improved styling
         number_section = BoxLayout(
             orientation='vertical',
             size_hint_y=None,
-            height=dp(30),
-            spacing=dp(2)
+            height=dp(28),
+            spacing=dp(3)
         )
         
         number_label_small = Label(
             text='Objektnummer:',
             size_hint_y=None,
-            height=dp(15),
-            font_size='12sp',
+            height=dp(12),
+            font_size='11sp',
             bold=True,
             halign='left',
-            color=(0.5, 0.5, 0.5, 1)
+            color=(0.45, 0.45, 0.45, 1)
         )
         number_label_small.bind(size=number_label_small.setter('text_size'))
         
@@ -346,10 +349,10 @@ class DetailScreen(Screen):
         number_value = Label(
             text=obj_num,
             size_hint_y=None,
-            height=dp(15),
-            font_size='12sp',
+            height=dp(16),
+            font_size='13sp',
             halign='left',
-            color=(0.3, 0.3, 0.3, 1)
+            color=(0.2, 0.2, 0.2, 1)
         )
         number_value.bind(size=number_value.setter('text_size'))
         
@@ -357,22 +360,22 @@ class DetailScreen(Screen):
         number_section.add_widget(number_value)
         card_container.add_widget(number_section)
         
-        # Description with small label
+        # Description with improved styling
         desc_section = BoxLayout(
             orientation='vertical',
             size_hint_y=None,
-            height=desc_height + dp(15),
-            spacing=dp(2)
+            height=desc_height + dp(12),
+            spacing=dp(3)
         )
         
         desc_label_small = Label(
             text='Beskrivelse:',
             size_hint_y=None,
-            height=dp(15),
-            font_size='12sp',
+            height=dp(12),
+            font_size='11sp',
             bold=True,
             halign='left',
-            color=(0.5, 0.5, 0.5, 1)
+            color=(0.45, 0.45, 0.45, 1)
         )
         desc_label_small.bind(size=desc_label_small.setter('text_size'))
         
@@ -380,10 +383,10 @@ class DetailScreen(Screen):
             text=description,
             size_hint_y=None,
             height=desc_height,
-            font_size='14sp',
+            font_size='13sp',
             halign='left',
             valign='top',
-            color=(0.3, 0.3, 0.3, 1),
+            color=(0.25, 0.25, 0.25, 1),
             text_size=(None, None)
         )
         desc_value.bind(size=desc_value.setter('text_size'))
@@ -402,36 +405,8 @@ class DetailScreen(Screen):
     
     def add_basic_info_cards(self, parent_layout):
         """Add basic information cards (classification, dating, location, context)"""
-        obj = self.current_object
-        
-        # Object details card with basic fields
-        details_info = []
-        
-        # Classification
-        classification = obj.get('classification', '')
-        if classification and classification != 'Ukendt':
-            details_info.append(f"Klassifikation: {classification}")
-        
-        # Dating
-        dating = obj.get('dating', '')
-        if dating and dating != 'Ukendt datering':
-            details_info.append(f"Datering: {dating}")
-        
-        # Current Location
-        current_location = obj.get('currentLocation', '')
-        if current_location and current_location != 'Placering ikke registreret':
-            details_info.append(f"Aktuel placering: {current_location}")
-        
-        # Context
-        context = obj.get('context', '')
-        if context and context != 'Ukendt kontekst':
-            details_info.append(f"Kontekst: {context}")
-        
-        # Add basic info card if we have any info
-        if details_info:
-            details_text = "\n".join(details_info)
-            details_card = self.create_info_card("Grundlæggende information", details_text)
-            parent_layout.add_widget(details_card)
+        # Skip this method - basic info now handled by new fields cards
+        pass
     
     def add_description_and_other_cards(self, parent_layout):
         """Add description and remaining detail cards"""
@@ -443,16 +418,16 @@ class DetailScreen(Screen):
             desc_card = self.create_info_card("Beskrivelse", description)
             parent_layout.add_widget(desc_card)
         
-        # Additional details card (old fields as fallback)
+        # Additional details card (improved formatting)
         additional_info = []
         
         object_type = obj.get('objectName', '')
         if object_type:
-            additional_info.append(f"Type: {object_type}")
+            additional_info.append(f"[b]Type:[/b] {object_type}")
             
         department = obj.get('department', '')
         if department and department != 'Ukendt afdeling':
-            additional_info.append(f"Afdeling: {department}")
+            additional_info.append(f"[b]Afdeling:[/b] {department}")
         
         if additional_info:
             additional_text = "\n".join(additional_info)
@@ -469,30 +444,32 @@ class DetailScreen(Screen):
             desc_card = self.create_info_card("Beskrivelse", description)
             parent_layout.add_widget(desc_card)
         
-        # Object details card with NEW fields
+        # Object details card with NEW fields - ALWAYS CREATE THIS CARD
         details_info = []
         
-        # Classification
+        # Classification (if available)
         classification = obj.get('classification', '')
         if classification and classification != 'Ukendt':
             details_info.append(f"Klassifikation: {classification}")
         
-        # Dating (NEW - DT field)
+        # Dating (if available)
         dating = obj.get('dating', '')
         if dating and dating != 'Ukendt datering':
             details_info.append(f"Datering: {dating}")
         
-        # Current Location (NEW - 2A field)
+        # Current Location (if available)
         current_location = obj.get('currentLocation', '')
         if current_location and current_location != 'Placering ikke registreret':
             details_info.append(f"Aktuel placering: {current_location}")
         
-        # Context (NEW - C1 field)
+        # Context (if available)
         context = obj.get('context', '')
         if context and context != 'Ukendt kontekst':
             details_info.append(f"Kontekst: {context}")
         
-        # Old fields (keep as fallback)
+        # NOTE: New fields are now handled by add_new_fields_cards() method
+        
+        # Legacy fields for fallback information
         object_type = obj.get('objectName', '')
         if object_type:
             details_info.append(f"Type: {object_type}")
@@ -513,10 +490,15 @@ class DetailScreen(Screen):
         if dimensions:
             details_info.append(f"Dimensioner: {dimensions}")
             
-        if details_info:
-            details_text = "\n".join(details_info)
-            details_card = self.create_info_card("Objekt detaljer", details_text)
-            parent_layout.add_widget(details_card)
+        # ALWAYS create the object details card - even if only new fields have data
+        # Add fallback text if no details at all
+        if not details_info:
+            details_info.append("Objekt detaljer tilgængelige:")
+        
+        # Create the card with whatever info we have
+        details_text = "\n".join(details_info)
+        details_card = self.create_info_card("Objekt detaljer", details_text)
+        parent_layout.add_widget(details_card)
         
         # Artist information if available
         artist = obj.get('artistDisplayName', '')
@@ -554,53 +536,54 @@ class DetailScreen(Screen):
             parent_layout.add_widget(collection_card)
     
     def create_info_card(self, title, content):
-        """Create a clean information card"""
-        # Calculate dynamic height based on content length
-        estimated_lines = max(2, len(content) // 50 + 1)
-        content_height = min(dp(200), dp(20 * estimated_lines))
-        total_height = dp(50) + content_height + dp(20)  # Title + content + padding
+        """Create a clean information card with consistent styling"""
+        # Calculate dynamic height based on content length with tighter sizing
+        estimated_lines = max(1, len(content) // 70 + content.count('\n'))
+        content_height = min(dp(120), dp(16 * estimated_lines + 20))  # Tighter line height
+        total_height = dp(24) + content_height + dp(20)  # Title + content + minimal padding
         
         card_container = BoxLayout(
             orientation='vertical',
             size_hint_y=None,
             height=total_height,
-            spacing=dp(10),
-            padding=[dp(15), dp(15), dp(15), dp(15)]
+            spacing=dp(6),
+            padding=[dp(16), dp(12), dp(16), dp(12)]  # Less vertical padding
         )
         
-        # Card background
+        # Card background with subtle shadow effect
         with card_container.canvas.before:
-            Color(0.98, 0.98, 0.99, 1)  # Very light blue-gray
+            Color(0.97, 0.98, 1.0, 1)  # Very light blue-white
             card_container.bg_rect = RoundedRectangle(
                 pos=card_container.pos,
                 size=card_container.size,
-                radius=[12, 12, 12, 12]
+                radius=[10, 10, 10, 10]
             )
         card_container.bind(pos=self._update_card_bg, size=self._update_card_bg)
         
-        # Title
+        # Title with consistent styling
         title_label = Label(
             text=title,
             size_hint_y=None,
-            height=dp(30),
-            font_size='16sp',
+            height=dp(24),
+            font_size='15sp',
             bold=True,
-            color=(0.15, 0.25, 0.4, 1),  # Navy blue
+            color=(0.2, 0.3, 0.5, 1),  # Elegant dark blue
             halign='left',
             valign='middle'
         )
         title_label.bind(size=title_label.setter('text_size'))
         
-        # Content
+        # Content with improved readability
         content_label = Label(
             text=content,
             size_hint_y=None,
             height=content_height,
-            font_size='14sp',
-            color=(0.3, 0.3, 0.3, 1),
+            font_size='13sp',
+            color=(0.25, 0.25, 0.25, 1),  # Darker for better readability
             halign='left',
             valign='top',
-            text_size=(None, None)
+            text_size=(None, None),
+            markup=True  # Enable markup for potential formatting
         )
         content_label.bind(size=content_label.setter('text_size'))
         
@@ -637,3 +620,150 @@ class DetailScreen(Screen):
         if hasattr(instance, 'bg_rect'):
             instance.bg_rect.pos = instance.pos
             instance.bg_rect.size = instance.size
+    
+    def add_save_button(self, parent_layout):
+        """Add save/unsave button to detail screen"""
+        # Import here to avoid circular imports
+        from utils.data_manager import DataManager
+        
+        # Initialize data manager if not already done
+        if not hasattr(self, 'data_manager'):
+            self.data_manager = DataManager()
+        
+        # Create button container
+        button_container = BoxLayout(
+            orientation='horizontal',
+            size_hint_y=None,
+            height=dp(60),
+            spacing=dp(15),
+            padding=[dp(20), dp(15), dp(20), dp(15)]
+        )
+        
+        # Check if item is already saved
+        obj_number = self.current_object.get('objectNumber', '')
+        is_saved = self.data_manager.is_item_saved(obj_number)
+        
+        # Create save/unsave button
+        if is_saved:
+            save_btn = Button(
+                text='Fjern fra gemte',
+                size_hint_x=1.0,
+                font_size='16sp',
+                background_color=(0.8, 0.3, 0.3, 1),
+                color=(1, 1, 1, 1)
+            )
+            save_btn.bind(on_press=lambda x: self._handle_unsave())
+        else:
+            save_btn = Button(
+                text='Gem objekt',
+                size_hint_x=1.0,
+                font_size='16sp',
+                background_color=(0.2, 0.6, 0.2, 1),
+                color=(1, 1, 1, 1)
+            )
+            save_btn.bind(on_press=lambda x: self._handle_save())
+        
+        button_container.add_widget(save_btn)
+        parent_layout.add_widget(button_container)
+        
+        # Store reference for refreshing
+        self.save_button_container = button_container
+    
+    def _handle_save(self):
+        """Handle save button press"""
+        if not hasattr(self, 'data_manager'):
+            from utils.data_manager import DataManager
+            self.data_manager = DataManager()
+        
+        self.data_manager.add_to_saved_items(self.current_object)
+        print(f"Saved item: {self.current_object.get('title', 'Unknown')}")
+        
+        # Refresh the button to show unsave option
+        self._refresh_save_button()
+    
+    def _handle_unsave(self):
+        """Handle unsave button press"""
+        if not hasattr(self, 'data_manager'):
+            from utils.data_manager import DataManager
+            self.data_manager = DataManager()
+        
+        self.data_manager.remove_from_saved_items(self.current_object)
+        print(f"Removed item from saved: {self.current_object.get('title', 'Unknown')}")
+        
+        # Refresh the button to show save option
+        self._refresh_save_button()
+    
+    def _refresh_save_button(self):
+        """Refresh save button state"""
+        if hasattr(self, 'save_button_container') and self.save_button_container.parent:
+            parent = self.save_button_container.parent
+            parent.remove_widget(self.save_button_container)
+            self.add_save_button(parent)
+    
+    def add_new_fields_cards(self, parent_layout):
+        """Add dedicated cards for the new API fields with improved formatting"""
+        obj = self.current_object
+        
+        # Placering Information Card
+        location_info = []
+        location_name = obj.get('location_name', '')
+        if location_name:
+            location_info.append(f"[b]Navn:[/b] {location_name}")
+        
+        location_context = obj.get('location_context', '')
+        if location_context:
+            location_info.append(f"[b]Kontekst:[/b] {location_context}")
+        
+        if location_info:
+            location_text = "\n".join(location_info)
+            location_card = self.create_info_card("Placering", location_text)
+            parent_layout.add_widget(location_card)
+        
+        # Erhvervelse (Acquisition) Information Card  
+        acquisition_info = []
+        acquisition_number = obj.get('acquisition_number', '')
+        if acquisition_number:
+            acquisition_info.append(f"[b]Accession nr.:[/b] {acquisition_number}")
+        
+        acquisition_source = obj.get('acquisition_source', '')
+        if acquisition_source:
+            acquisition_info.append(f"[b]Giver:[/b] {acquisition_source}")
+        
+        acquisition_reason = obj.get('acquisition_reason', '')
+        if acquisition_reason:
+            acquisition_info.append(f"[b]Begrundelse:[/b] {acquisition_reason}")
+        
+        acquisition_date = obj.get('acquisition_date', '')
+        if acquisition_date:
+            acquisition_info.append(f"[b]Dato:[/b] {acquisition_date}")
+        
+        if acquisition_info:
+            acquisition_text = "\n".join(acquisition_info)
+            acquisition_card = self.create_info_card("Accession", acquisition_text)
+            parent_layout.add_widget(acquisition_card)
+        
+        # Proveniens Information Card
+        provenance_info = []
+        event_type = obj.get('event_type', '')
+        if event_type:
+            provenance_info.append(f"[b]Type:[/b] {event_type}")
+        
+        event_name = obj.get('event_name', '')
+        if event_name:
+            provenance_info.append(f"[b]Betegnelse:[/b] {event_name}")
+        
+        event_description = obj.get('event_description', '')
+        if event_description:
+            provenance_info.append(f"[b]Beskrivelse:[/b] {event_description}")
+        
+        if provenance_info:
+            provenance_text = "\n".join(provenance_info)
+            provenance_card = self.create_info_card("Proveniens", provenance_text)
+            parent_layout.add_widget(provenance_card)
+        
+        # Ophavsmand Card
+        craftsman = obj.get('craftsman', '')
+        if craftsman:
+            craftsman_text = f"[b]Ophavsmand:[/b] {craftsman}"
+            craftsman_card = self.create_info_card("Ophavsmand", craftsman_text)
+            parent_layout.add_widget(craftsman_card)

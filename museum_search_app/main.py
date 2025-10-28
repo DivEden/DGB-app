@@ -56,7 +56,7 @@ class SearchScreen(Screen):
 class SaraMuseumApp(App):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.title = "SARA Museums App"
+        self.title = "DGB Assistent"
     
     def build(self):
         main_container = BoxLayout(orientation='vertical')

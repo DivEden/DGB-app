@@ -21,6 +21,37 @@ class SaraAPI:
         self.username = r"adlibhosting\DGB-API-USER"
         self.password = "YxUyuzNLubfNKbx2"
         self.auth = HTTPBasicAuth(self.username, self.password)
+        
+        # Definér ønskede felter fra SARA API
+        self.search_fields = [
+            'priref',
+            'object_number',
+            'title',
+            'object_category',
+            'object_name',
+            'technique',
+            'material',
+            'dimensions',
+            'description',
+            'dating.date.start',
+            'dating.date.end',
+            'location.default.name',       # Placering (navn) - NL
+            'location.default.context',    # Placering (kontekst) - C2
+            'acquisition.number',          # Accession nr. - HF
+            'acquisition.source',          # Giver - VN
+            'acquisition.reason',          # Begrundelse - VR
+            'acquisition.date',            # Dato - VD
+            'event.type',                  # Proveniens-type - 1T
+            'event.name',                  # Proveniens-betegnelse - 1N
+            'event.description',           # Proveniens-beskrivelse - 1S
+            'craftsman',                   # Ophavsmand - VO
+            'reproduction',                # For at få billeder
+            'reproduction.reference',
+            'reproduction.type',
+            'reproduction.format',
+            'reproduction.identifier_URL',
+            'reproduction.publish_on_website'
+        ]
     
     def search_objects_by_number(self, object_number: str, limit: int = 20) -> List[Dict]:
         """
@@ -40,7 +71,8 @@ class SaraAPI:
                 'database': 'collection',
                 'search': f'object_number="{object_number}"',
                 'output': 'xml',
-                'limit': limit
+                'limit': limit,
+                'fields': ','.join(self.search_fields)
             }
             
             response = requests.get(
@@ -119,7 +151,8 @@ class SaraAPI:
                     'database': 'collection',
                     'search': f'all="{query}"',
                     'output': 'xml',
-                    'limit': limit
+                    'limit': limit,
+                    'fields': ','.join(self.search_fields)
                 }
                 
                 response = requests.get(
@@ -177,7 +210,8 @@ class SaraAPI:
                 'database': 'collection',
                 'search': f'priref={priref}',
                 'output': 'xml',
-                'limit': 1
+                'limit': 1,
+                'fields': ','.join(self.search_fields)
             }
             
             response = requests.get(
@@ -245,6 +279,27 @@ class SaraAPI:
             'currentLocation': self._extract_current_location(record),
             'context': self._extract_context(record),
         }
+        
+        # Tilføj de nye ønskede felter
+        obj_data.update({
+            # Placering
+            'location_name': get_multilang_text('.//location.default.name', ''),  # NL
+            'location_context': get_multilang_text('.//location.default.context', ''),  # C2
+            
+            # Erhvervelse
+            'acquisition_number': get_text('.//acquisition.number', ''),  # HF
+            'acquisition_source': get_multilang_text('.//acquisition.source', ''),  # VN - Giver
+            'acquisition_reason': get_multilang_text('.//acquisition.reason', ''),  # VR - Begrundelse
+            'acquisition_date': get_text('.//acquisition.date', ''),  # VD - Dato
+            
+            # Proveniens
+            'event_type': get_multilang_text('.//event.type', ''),  # 1T - Proveniens-type
+            'event_name': get_multilang_text('.//event.name', ''),  # 1N - Proveniens-betegnelse
+            'event_description': get_multilang_text('.//event.description', ''),  # 1S - Proveniens-beskrivelse
+            
+            # Ophavsmand
+            'craftsman': get_multilang_text('.//craftsman', ''),  # VO - Ophavsmand
+        })
         
         # Kunstner information
         artist_name = get_multilang_text('.//production.creator', '')
@@ -698,7 +753,8 @@ class SaraAPI:
                 'database': 'collection',
                 'search': f'object_number="{object_number}"',
                 'output': 'xml',
-                'limit': 1
+                'limit': 1,
+                'fields': ','.join(self.search_fields)
             }
             
             response = requests.get(
@@ -738,7 +794,8 @@ class SaraAPI:
                 'database': 'collection',
                 'search': f'object_category="{category}"',
                 'output': 'xml',
-                'limit': limit
+                'limit': limit,
+                'fields': ','.join(self.search_fields)
             }
             
             response = requests.get(
@@ -816,7 +873,8 @@ class SaraAPI:
                 'database': 'collection',
                 'search': 'all',
                 'limit': 1,
-                'output': 'xml'
+                'output': 'xml',
+                'fields': ','.join(self.search_fields)
             }
             
             response = requests.get(

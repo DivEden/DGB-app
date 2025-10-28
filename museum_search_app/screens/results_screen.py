@@ -160,12 +160,16 @@ class ResultsScreen(Screen):
         self.results_layout.add_widget(count_label)
         
         # Display results
+        print(f"DEBUG ResultsScreen: About to create {len(results)} result cards")
         for i, obj in enumerate(results, 1):
+            print(f"DEBUG ResultsScreen: Creating ResultCard #{i} for {obj.get('title', 'Unknown')}")
             result_card = ResultCard(
                 obj_data=obj,
                 index=i
             )
+            print(f"DEBUG ResultsScreen: ResultCard #{i} created, adding to layout")
             self.results_layout.add_widget(result_card)
+            print(f"DEBUG ResultsScreen: ResultCard #{i} added to layout")
     
     def go_back(self, *args):
         """Go back to the home screen"""

@@ -1,10 +1,10 @@
 [app]
 
 # (str) Title of your application
-title = Museum Search
+title = DGB Assistent
 
 # (str) Package name
-package.name = museumsearch
+package.name = dgbassistent
 
 # (str) Package domain (needed for android/ios packaging)
 package.domain = dk.natmus
