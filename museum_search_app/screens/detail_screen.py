@@ -13,6 +13,7 @@ from kivy.uix.widget import Widget
 from kivy.uix.image import AsyncImage
 from kivy.graphics import Color, Rectangle, RoundedRectangle
 from kivy.metrics import dp
+from kivy.clock import Clock
 
 
 class DetailScreen(Screen):
@@ -26,6 +27,14 @@ class DetailScreen(Screen):
         self.all_images = []  # Store all available images
         self.main_image_widget = None  # Reference to the main image widget
         self.image_counter_widget = None  # Reference to the image counter
+        
+    def safe_set_image_source(self, image_widget, local_path):
+        """Sæt billede source sikkert på UI-tråden (Android-compatible)"""
+        def _apply_source(dt):
+            if image_widget and local_path:
+                image_widget.source = str(local_path)
+                image_widget.reload()
+        Clock.schedule_once(_apply_source, 0)
         
     def show_object(self, obj):
         """Display full details for an object"""

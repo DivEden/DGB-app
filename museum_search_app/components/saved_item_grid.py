@@ -12,6 +12,7 @@ from kivy.uix.button import Button
 from kivy.uix.image import AsyncImage
 from kivy.graphics import Color, RoundedRectangle, Line
 from kivy.metrics import dp
+from kivy.clock import Clock
 
 
 class SavedItemGrid(GridLayout):
@@ -29,7 +30,15 @@ class SavedItemGrid(GridLayout):
         self.view_callback = view_callback
         
         self._populate_grid()
-    
+        
+    def safe_set_image_source(self, image_widget, local_path):
+        """Sæt billede source sikkert på UI-tråden (Android-compatible)"""
+        def _apply_source(dt):
+            if image_widget and local_path:
+                image_widget.source = str(local_path)
+                image_widget.reload()
+        Clock.schedule_once(_apply_source, 0)
+        
     def _populate_grid(self):
         """Populate the grid with saved items"""
         self.clear_widgets()

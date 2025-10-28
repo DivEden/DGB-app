@@ -11,6 +11,7 @@ from kivy.uix.scrollview import ScrollView
 from kivy.uix.image import AsyncImage
 from kivy.graphics import Color, RoundedRectangle
 from kivy.metrics import dp
+from kivy.clock import Clock
 
 from utils.data_manager import DataManager
 
@@ -38,7 +39,15 @@ class ResultCard(BoxLayout):
         self.all_images = []
         self.current_image_index = 0
         
-        self._calculate_height()
+    def safe_set_image_source(self, image_widget, local_path):
+        """Sæt billede source sikkert på UI-tråden (Android-compatible)"""
+        def _apply_source(dt):
+            if image_widget and local_path:
+                image_widget.source = str(local_path)
+                image_widget.reload()
+        Clock.schedule_once(_apply_source, 0)
+        
+    def _calculate_height(self):
         self._create_card()
     
     def _calculate_height(self):

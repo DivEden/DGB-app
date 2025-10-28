@@ -10,6 +10,7 @@ from kivy.uix.label import Label
 from kivy.uix.image import AsyncImage
 from kivy.graphics import Color, RoundedRectangle, Line
 from kivy.metrics import dp
+from kivy.clock import Clock
 
 
 class RecentSearchesCarousel(BoxLayout):
@@ -25,7 +26,15 @@ class RecentSearchesCarousel(BoxLayout):
         
         self.item_click_callback = item_click_callback
         
-        self._create_carousel_layout()
+    def safe_set_image_source(self, image_widget, local_path):
+        """Sæt billede source sikkert på UI-tråden (Android-compatible)"""
+        def _apply_source(dt):
+            if image_widget and local_path:
+                image_widget.source = str(local_path)
+                image_widget.reload()
+        Clock.schedule_once(_apply_source, 0)
+        
+    def _create_carousel_layout(self):
     
     def _create_carousel_layout(self):
         """Create the carousel layout"""

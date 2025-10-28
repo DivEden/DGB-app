@@ -662,7 +662,7 @@ class SaraAPI:
     def download_image_with_auth(self, image_url: str) -> Optional[str]:
         """
         Download billede med authentication og returner lokal filsti
-        Simplificeret version til desktop og Android
+        Android-sikker version med app data directory
         
         Args:
             image_url: URL til billede der skal downloades
@@ -671,24 +671,38 @@ class SaraAPI:
             Lokal filsti til downloaded billede, eller None ved fejl
         """
         import os
-        import tempfile
         import hashlib
+        from pathlib import Path
+        from kivy.app import App
         
         try:
-            # Lav et unikt filnavn baseret på URL
-            url_hash = hashlib.md5(image_url.encode()).hexdigest()[:8]
-            filename_from_url = os.path.basename(image_url.split('value=')[1]) if 'value=' in image_url else 'image.jpg'
-            safe_filename = f"{url_hash}_{filename_from_url}"
+            # Brug appens sikre data directory (virker på Android)
+            app_instance = App.get_running_app()
+            if app_instance:
+                base_dir = Path(app_instance.user_data_dir)
+            else:
+                # Fallback for test uden app
+                base_dir = Path.cwd()
             
-            # Brug temp directory (virker på både Windows og Android)
-            cache_dir = tempfile.gettempdir()
-            local_path = os.path.join(cache_dir, safe_filename)
+            cache_dir = base_dir / "temp_images"
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Lav sikkert filnavn baseret på URL hash
+            url_hash = hashlib.md5(image_url.encode()).hexdigest()[:12]
+            filename_from_url = os.path.basename(image_url.split('value=')[1]) if 'value=' in image_url else 'image.jpg'
+            
+            # Sikker extension
+            ext = Path(filename_from_url).suffix.lower()
+            if ext not in ['.jpg', '.jpeg', '.png', '.webp']:
+                ext = '.jpg'
+            
+            safe_filename = f"{url_hash}{ext}"
+            local_path = cache_dir / safe_filename
             
             # Tjek om vi allerede har downloaded det
-            if os.path.exists(local_path):
+            if local_path.exists() and local_path.stat().st_size > 0:
                 print(f"Using cached image: {safe_filename}")
-                # Returner sti som forward slashes for Kivy
-                return local_path.replace('\\', '/')
+                return str(local_path)
             
             # Lav request med authentication
             request = urllib.request.Request(image_url)
@@ -703,14 +717,20 @@ class SaraAPI:
             response = urllib.request.urlopen(request, timeout=10)
             image_data = response.read()
             
-            # Gem til lokal fil
-            with open(local_path, 'wb') as f:
+            # Gem til lokal fil med atomisk skrivning
+            temp_path = local_path.with_suffix(local_path.suffix + '.part')
+            with open(temp_path, 'wb') as f:
                 f.write(image_data)
+                f.flush()
+                os.fsync(f.fileno())  # Sørg for at data er skrevet til disk
+            
+            # Atomisk rename når filen er færdig
+            temp_path.replace(local_path)
             
             print(f"Downloaded and saved image: {safe_filename} ({len(image_data)} bytes)")
             
-            # Returner sti som forward slashes for Kivy
-            return local_path.replace('\\', '/')
+            # Returner absolut sti
+            return str(local_path)
             
         except Exception as e:
             print(f"Error downloading image: {e}")
