@@ -12,7 +12,6 @@ from kivy.metrics import dp
 
 from components.search_bar import SearchBar
 from components.carousel import RecentSearchesCarousel
-from components.recent_additions import RecentAdditionsCarousel
 from components.result_card import ResultCard
 from utils.data_manager import DataManager
 from sara_api import SaraAPI
@@ -81,12 +80,6 @@ class HomeScreen(BoxLayout):
         print(f"HomeScreen: Carousel created, callback set to: {self.carousel.item_click_callback}")
         main_layout.add_widget(self.carousel)
         
-        # Recent additions carousel
-        print("HomeScreen: Creating RecentAdditionsCarousel component")
-        self.recent_additions = RecentAdditionsCarousel(item_click_callback=self.view_recent_addition)
-        print(f"HomeScreen: Recent additions created")
-        main_layout.add_widget(self.recent_additions)
-        
         # Container to hold main_layout at top and spacer at bottom
         full_layout = BoxLayout(
             orientation='vertical',
@@ -102,9 +95,6 @@ class HomeScreen(BoxLayout):
         
         # Update carousel with recent searches
         self.update_recent_carousel()
-        
-        # Load recent additions
-        self.load_recent_additions()
         
         self.add_widget(full_layout)
     
@@ -211,39 +201,3 @@ class HomeScreen(BoxLayout):
         """Update the recent searches carousel"""
         recent_searches = self.data_manager.get_recent_searches()
         self.carousel.update_carousel(recent_searches)
-    
-    def load_recent_additions(self):
-        """Load recent additions from SARA API"""
-        print("HomeScreen: Loading recent additions from SARA API")
-        
-        # Load in background thread
-        def load_thread():
-            try:
-                # Request 10 recent additions with images (optimized for mobile)
-                recent_objects = self.sara_api.get_recent_additions(limit=10)
-                # Update UI in main thread
-                from kivy.clock import Clock
-                Clock.schedule_once(lambda dt: self._update_recent_additions(recent_objects), 0)
-            except Exception as e:
-                print(f"HomeScreen: Error loading recent additions: {e}")
-                from kivy.clock import Clock
-                Clock.schedule_once(lambda dt: self._update_recent_additions([]), 0)
-        
-        import threading
-        threading.Thread(target=load_thread, daemon=True).start()
-    
-    def _update_recent_additions(self, recent_objects):
-        """Update recent additions carousel with data"""
-        print(f"HomeScreen: Updating recent additions with {len(recent_objects)} objects")
-        self.recent_additions.update_carousel(recent_objects)
-    
-    def view_recent_addition(self, obj_data):
-        """View a recent addition by searching for it - same as search_recent_item"""
-        print(f"HomeScreen.view_recent_addition called with: {obj_data}")
-        obj_number = obj_data.get('objectNumber', '')
-        if obj_number:
-            print(f"HomeScreen: Setting search text to '{obj_number}' and calling search")
-            self.search_bar.search_input.text = obj_number
-            self.search_objects(obj_number)
-        else:
-            print("HomeScreen: No objectNumber in obj_data")

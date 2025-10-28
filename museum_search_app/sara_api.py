@@ -550,12 +550,13 @@ class SaraAPI:
     def _extract_images(self, record) -> List[str]:
         """
         Udtræk billede URLs fra SARA record med SARA API getcontent format
+        Download billeder da AsyncImage ikke kan håndtere Basic Auth
         
         Args:
             record: XML record element
         
         Returns:
-            Liste af billede URLs
+            Liste af lokale billedstier (downloadede med auth)
         """
         images = []
         
@@ -581,9 +582,7 @@ class SaraAPI:
                     print(f"DEBUG _extract_images: No publish_on_website element, defaulting to published")
                 
                 if is_published:
-                    # SARA getcontent API URL format (baseret på brugerens link)
-                    # https://sara-api.adlibhosting.com/SARA-011-DGB/wwwopac.ashx?command=getcontent&server=images&value=1568771.jpg
-                    # Accept both lowercase and uppercase extensions
+                    # SARA getcontent API URL format - download med auth
                     filename_lower = filename.lower()
                     if filename_lower.endswith('.jpg') or filename_lower.endswith('.jpeg') or filename_lower.endswith('.png'):
                         image_url = f"https://sara-api.adlibhosting.com/SARA-011-DGB/wwwopac.ashx?command=getcontent&server=images&value={filename}"
@@ -602,13 +601,13 @@ class SaraAPI:
             else:
                 print(f"DEBUG _extract_images: Reproduction #{idx}: No filename found")
         
-        print(f"DEBUG _extract_images: Total images collected: {len(images)}")
+        print(f"DEBUG _extract_images: Total images downloaded: {len(images)}")
         return images
     
     def download_image_with_auth(self, image_url: str) -> Optional[str]:
         """
         Download billede med authentication og returner lokal filsti
-        Virker både på desktop og Android
+        Simplificeret version til desktop og Android
         
         Args:
             image_url: URL til billede der skal downloades
@@ -626,29 +625,15 @@ class SaraAPI:
             filename_from_url = os.path.basename(image_url.split('value=')[1]) if 'value=' in image_url else 'image.jpg'
             safe_filename = f"{url_hash}_{filename_from_url}"
             
-            # Find den rigtige cache mappe - både desktop og Android
-            try:
-                from kivy.utils import platform
-                if platform == 'android':
-                    # På Android, brug app's cache directory
-                    from android.storage import app_storage_path
-                    cache_dir = app_storage_path()
-                else:
-                    # På desktop, brug temp directory
-                    cache_dir = tempfile.gettempdir()
-            except:
-                # Fallback til temp directory
-                cache_dir = tempfile.gettempdir()
-            
+            # Brug temp directory (virker på både Windows og Android)
+            cache_dir = tempfile.gettempdir()
             local_path = os.path.join(cache_dir, safe_filename)
             
             # Tjek om vi allerede har downloaded det
             if os.path.exists(local_path):
                 print(f"Using cached image: {safe_filename}")
-                # Konverter Windows-sti til format som Kivy/AsyncImage kan læse
-                local_path_normalized = local_path.replace('\\', '/')
-                print(f"Returning cached normalized path: {local_path_normalized}")
-                return local_path_normalized
+                # Returner sti som forward slashes for Kivy
+                return local_path.replace('\\', '/')
             
             # Lav request med authentication
             request = urllib.request.Request(image_url)
@@ -669,11 +654,8 @@ class SaraAPI:
             
             print(f"Downloaded and saved image: {safe_filename} ({len(image_data)} bytes)")
             
-            # Konverter Windows-sti til format som Kivy/AsyncImage kan læse
-            # Kivy foretrækker forward slashes på alle platforme
-            local_path_normalized = local_path.replace('\\', '/')
-            print(f"Returning normalized path: {local_path_normalized}")
-            return local_path_normalized
+            # Returner sti som forward slashes for Kivy
+            return local_path.replace('\\', '/')
             
         except Exception as e:
             print(f"Error downloading image: {e}")
@@ -849,138 +831,6 @@ class SaraAPI:
         except Exception as e:
             print(f"Forbindelsestest fejl: {e}")
             return False
-    
-    def get_recent_additions(self, limit: int = 10) -> List[Dict]:
-        """
-        Hent seneste tilføjede objekter fra SARA databasen
-        Sorteret efter oprettelsesdato (nyeste først)
-        KUN objekter med billeder
-        
-        Args:
-            limit: Maksimum antal resultater (default 10 for mobil performance)
-        
-        Returns:
-            Liste af senest tilføjede objekter med billeder
-        """
-        try:
-            # Fetch more records to ensure we get enough with images
-            fetch_limit = limit * 5  # Fetch 5x more to filter for images
-            
-            params = {
-                'command': 'search',
-                'database': 'collection',
-                'search': 'all',
-                'limit': fetch_limit,
-                'xmltype': 'grouped'
-            }
-            
-            print(f"SARA API: Fetching {fetch_limit} records for recent additions (need {limit} with images)")
-            
-            response = requests.get(
-                self.base_url,
-                params=params,
-                auth=self.auth,
-                timeout=30
-            )
-            
-            if response.status_code != 200:
-                print(f"SARA API: HTTP {response.status_code}")
-                return []
-            
-            # Parse XML response
-            root = ET.fromstring(response.content)
-            
-            # Get diagnostic info
-            diagnostic = root.find('.//diagnostic')
-            if diagnostic is not None:
-                hits_elem = diagnostic.find('.//hits')
-                hits = int(hits_elem.text) if hits_elem is not None and hits_elem.text else 0
-                print(f"SARA API: Database has {hits} total objects")
-            
-            # Parse objekter fra XML
-            records = root.findall('.//record')
-            
-            objects_with_dates = []
-            for record in records:
-                obj = self._parse_object_record(record)
-                if obj:
-                    # Extract date fields for sorting
-                    obj['@created'] = record.get('created', '')
-                    obj['@modification'] = record.get('modification', '')
-                    
-                    # Try to get modification date from Edit field
-                    edit_elems = record.findall('.//Edit')
-                    if edit_elems:
-                        last_edit = edit_elems[-1]
-                        edit_date = last_edit.find('.//edit.date')
-                        if edit_date is not None and edit_date.text:
-                            obj['last_edit_date'] = edit_date.text
-                    
-                    # Get input date
-                    input_date = record.find('.//input.date')
-                    if input_date is not None and input_date.text:
-                        obj['input_date'] = input_date.text
-                    
-                    objects_with_dates.append(obj)
-            
-            # Client-side sort by date (newest first)
-            objects_with_dates.sort(key=self._get_sort_date, reverse=True)
-            
-            # Filter for objects WITH images only
-            objects_with_images = [obj for obj in objects_with_dates if obj.get('hasImage', False) and obj.get('primaryImage')]
-            
-            print(f"SARA API: Found {len(objects_with_images)} objects with images out of {len(objects_with_dates)} total")
-            
-            # Return requested limit
-            result = objects_with_images[:limit]
-            print(f"SARA API: Returning {len(result)} recent additions with images")
-            return result
-            
-        except ET.ParseError as e:
-            print(f"XML parsing fejl: {e}")
-            return []
-        except Exception as e:
-            print(f"Fejl ved hentning af seneste tilføjelser: {e}")
-            import traceback
-            traceback.print_exc()
-            return []
-    
-    def _get_sort_date(self, obj):
-        """Get sortable date from object for recent additions sorting"""
-        from datetime import datetime
-        
-        # Try different date fields in order of preference
-        # 1. @modification (ISO format)
-        if obj.get('@modification'):
-            try:
-                return datetime.fromisoformat(obj['@modification'].replace('Z', '+00:00'))
-            except:
-                pass
-        
-        # 2. @created (ISO format)
-        if obj.get('@created'):
-            try:
-                return datetime.fromisoformat(obj['@created'].replace('Z', '+00:00'))
-            except:
-                pass
-        
-        # 3. last_edit_date (YYYY-MM-DD format)
-        if obj.get('last_edit_date'):
-            try:
-                return datetime.strptime(obj['last_edit_date'], '%Y-%m-%d')
-            except:
-                pass
-        
-        # 4. input_date
-        if obj.get('input_date'):
-            try:
-                return datetime.strptime(obj['input_date'], '%Y-%m-%d')
-            except:
-                pass
-        
-        # Default to very old date if no date found
-        return datetime(1900, 1, 1)
-
 
 # Test funktion
 if __name__ == "__main__":
