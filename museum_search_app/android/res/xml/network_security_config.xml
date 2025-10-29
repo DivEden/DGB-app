@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Allow all HTTPS connections for development -->
+    <domain-config cleartextTrafficPermitted="true">
+        <!-- SARA API domain -->
+        <domain includeSubdomains="true">sara-api.adlibhosting.com</domain>
+        <!-- Allow any other museum/API domains -->
+        <domain includeSubdomains="true">adlibhosting.com</domain>
+    </domain-config>
+    
+    <!-- Base configuration for all other domains -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <!-- Trust system default CAs -->
+            <certificates src="system"/>
+            <!-- Trust user added CAs -->
+            <certificates src="user"/>
+        </trust-anchors>
+    </base-config>
+    
+    <!-- Debug overrides (only in debug builds) -->
+    <debug-overrides>
+        <trust-anchors>
+            <certificates src="system"/>
+            <certificates src="user"/>
+        </trust-anchors>
+    </debug-overrides>
+</network-security-config>

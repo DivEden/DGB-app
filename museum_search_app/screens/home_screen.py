@@ -7,6 +7,7 @@ Main search interface with recent searches carousel
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.label import Label
+from kivy.uix.button import Button
 from kivy.graphics import Color, RoundedRectangle, Rectangle
 from kivy.metrics import dp
 

@@ -108,7 +108,7 @@ class RecentSearchesCarousel(BoxLayout):
         if not recent_searches:
             # Show "no recent searches" message
             no_recent_label = Label(
-                text='Ingen seneste søgninger endnu\\nSøg efter objekter for at se dem her',
+                text='Ingen seneste søgninger endnu\nSøg efter objekter for at se dem her',
                 size_hint_x=None,
                 width=dp(320),
                 font_size='16sp',

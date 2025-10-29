@@ -145,7 +145,7 @@ android.accept_sdk_license = True
 
 # (str) Extra xml to write directly inside the <manifest><application> element of AndroidManifest.xml
 # use that parameter to provide a filename from where to load your custom XML code
-#android.extra_manifest_application_xml = ./src/android/extra_manifest_application.xml
+android.extra_manifest_application_xml = %(source.dir)s/android/manifest_application.xml
 
 # (str) Full name including package path of the Java class that implements Python Service
 # use that parameter to set custom Java class which extends PythonService
@@ -192,7 +192,7 @@ android.accept_sdk_license = True
 # 3) A directory, here 'legal_resources' must contain one or more directories, 
 # each of a resource kind:  drawable, xml, etc...
 # android.add_resources = legal_resources
-#android.add_resources =
+android.add_resources = %(source.dir)s/android/res/xml/network_security_config.xml:xml/network_security_config.xml
 
 # (list) Gradle dependencies to add
 #android.gradle_dependencies =

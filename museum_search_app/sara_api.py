@@ -10,6 +10,7 @@ from typing import List, Dict, Optional
 from requests.auth import HTTPBasicAuth
 import urllib.request
 import base64
+from utils.android_logger import android_logger
 
 
 class SaraAPI:
@@ -676,6 +677,13 @@ class SaraAPI:
         from kivy.app import App
         
         try:
+            # Log Android miljø info (kun første gang)
+            if not hasattr(self, '_logged_environment'):
+                android_logger.log_android_environment()
+                self._logged_environment = True
+            
+            android_logger.log_image_download_start(image_url)
+            
             # Brug appens sikre data directory (virker på Android)
             app_instance = App.get_running_app()
             if app_instance:
@@ -701,10 +709,17 @@ class SaraAPI:
             
             # Tjek om vi allerede har downloaded det
             if local_path.exists() and local_path.stat().st_size > 0:
-                print(f"Using cached image: {safe_filename}")
+                android_logger.log_image_cache_hit(safe_filename)
                 return str(local_path)
             
-            # Lav request med authentication
+            # Android SSL/HTTPS Fix - Opret SSL context der accepterer alle certificater
+            import ssl
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+            android_logger.log_ssl_context_creation()
+            
+            # Lav request med authentication og Android-venlige headers
             request = urllib.request.Request(image_url)
             
             # Tilføj authentication header  
@@ -712,9 +727,22 @@ class SaraAPI:
             auth_bytes = base64.b64encode(auth_string.encode('utf-8'))
             request.add_header("Authorization", f"Basic {auth_bytes.decode('ascii')}")
             
-            # Download billedet
-            print(f"Downloading image: {image_url}")
-            response = urllib.request.urlopen(request, timeout=10)
+            # Android-venlige headers for at undgå mobile blocking
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+                "Accept": "image/webp,image/apng,image/*,*/*;q=0.8",
+                "Accept-Language": "da,en;q=0.9",
+                "Cache-Control": "no-cache"
+            }
+            
+            for key, value in headers.items():
+                request.add_header(key, value)
+            
+            android_logger.log_network_request(image_url, headers)
+            
+            # Download billedet med SSL context
+            android_logger.log("DEBUG", f"Starter download med SSL context...")
+            response = urllib.request.urlopen(request, timeout=15, context=ssl_context)
             image_data = response.read()
             
             # Gem til lokal fil med atomisk skrivning
@@ -727,14 +755,53 @@ class SaraAPI:
             # Atomisk rename når filen er færdig
             temp_path.replace(local_path)
             
-            print(f"Downloaded and saved image: {safe_filename} ({len(image_data)} bytes)")
+            android_logger.log_image_download_success(image_url, len(image_data), str(local_path))
             
             # Returner absolut sti
             return str(local_path)
             
         except Exception as e:
-            print(f"Error downloading image: {e}")
+            android_logger.log_image_download_error(image_url, str(e))
             return None
+    
+    def test_image_download_capability(self) -> bool:
+        """
+        Test billede download funktionalitet med public HTTPS billede
+        
+        Returns:
+            True hvis download virker, False ellers
+        """
+        android_logger.log("INFO", "Tester billede download funktionalitet...")
+        
+        # Test URL - public billede der ikke kræver authentication  
+        test_url = "https://httpbin.org/image/jpeg"
+        
+        try:
+            import ssl
+            import urllib.request
+            
+            # Samme SSL setup som normal download
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+            
+            request = urllib.request.Request(test_url)
+            request.add_header("User-Agent", "Mozilla/5.0 (compatible; TestAgent)")
+            
+            android_logger.log("DEBUG", f"Tester download fra: {test_url}")
+            response = urllib.request.urlopen(request, timeout=10, context=ssl_context)
+            test_data = response.read()
+            
+            if len(test_data) > 1000:  # Minimum størrelse for et gyldigt billede
+                android_logger.log("INFO", f"Test download succesfuld: {len(test_data)} bytes")
+                return True
+            else:
+                android_logger.log("WARNING", f"Test download for lille: {len(test_data)} bytes")
+                return False
+                
+        except Exception as e:
+            android_logger.log("ERROR", f"Test download fejlede: {e}")
+            return False
     
     def _extract_year(self, date_string: str) -> int:
         """
