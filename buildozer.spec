@@ -88,8 +88,8 @@ fullscreen = 0
 #android.presplash_lottie = "path/to/lottie/file.json"
 
 # (str) Adaptive icon of the application (used if Android API level is 26+ at runtime)
-#icon.adaptive_foreground.filename = %(source.dir)s/data/icon_fg.png
-#icon.adaptive_background.filename = %(source.dir)s/data/icon_bg.png
+icon.adaptive_foreground.filename = %(source.dir)s/utils/Images/icon_fg.png
+icon.adaptive_background.filename = %(source.dir)s/utils/Images/icon_bg.png
 
 # (list) Permissions
 android.permissions = INTERNET, READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE
@@ -102,6 +102,9 @@ android.api = 31
 
 # (int) Minimum API your APK / AAB will support.
 android.minapi = 21
+
+# Force legacy icon behavior for older Android versions
+android.icon_background_color = #00000000
 
 # (int) Android SDK version to use
 #android.sdk = 20
