@@ -198,6 +198,25 @@ jobs:
 
         if [ $BUILD_EXIT_CODE -ne 0 ]; then
           echo "=== BUILD FAILED - Detailed Error Analysis ==="
+        else
+          echo "Debug build completed successfully!"
+          
+          # Also build AAB for release if debug succeeded
+          echo "=== Building AAB Release Version ==="
+          buildozer --verbose android release 2>&1 | tee buildozer-release.log
+          
+          AAB_EXIT_CODE=${PIPESTATUS[0]}
+          echo "AAB Buildozer exit code: $AAB_EXIT_CODE"
+          
+          if [ $AAB_EXIT_CODE -eq 0 ]; then
+            echo "AAB Release build completed successfully!"
+          else
+            echo "AAB build failed, but debug APK was successful"
+          fi
+        fi
+
+        if [ $BUILD_EXIT_CODE -ne 0 ]; then
+          echo "=== BUILD FAILED - Detailed Error Analysis ==="
 
           echo "=== Last 50 lines of buildozer.log ==="
           tail -n 50 buildozer.log || echo "Could not read buildozer.log"
@@ -225,15 +244,17 @@ jobs:
 
         echo "Build completed successfully!"
 
-    - name: Upload APK artifact
+    - name: Upload APK and AAB artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: museum-search-app-debug
-        path: bin/*.apk
+        name: museum-search-app-builds
+        path: |
+          bin/*.apk
+          bin/*.aab
         retention-days: 30
 
     - name: List build output
       run: |
         echo "Build completed! Generated files:"
         ls -la bin/ || echo "No bin directory found"
-        find . -name "*.apk" -type f || echo "No APK files found"
+        find . -name "*.apk" -o -name "*.aab" -type f || echo "No build files found"
