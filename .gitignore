@@ -1,6 +1,7 @@
 # Buildozer cache and mobile build files
 .buildozer/
 bin/
+p4a/
 
 # Python cache and bytecode
 __pycache__/
@@ -8,18 +9,23 @@ __pycache__/
 *.pyo
 *.pyd
 *.pdb
+.Python
 
 # Virtual environment  
 venv/
 env/
 .env
+.venv/
+museum_search_app/venv/
 
 # Kivy specific
 *.kv~
+.kivy/
 
-# App specific data files
+# App specific data files (user generated)
 recent_searches.json
 saved_items.json
+user_data/
 
 # Temporary files and logs
 *.tmp
@@ -28,38 +34,78 @@ saved_items.json
 *.swp
 *.swo
 *~
+.cache/
 
-# Downloaded images cache
+# Downloaded images cache (can be regenerated)
 temp_images/
+image_cache/
 
 # IDE files
 .vscode/
 .idea/
 *.sublime-*
+.spyderproject
+.spyproject
 
 # OS files
 .DS_Store
 Thumbs.db
 desktop.ini
+*.lnk
 
 # Mobile build outputs
 *.apk
 *.aab
 *.ipa
+*.deb
 
 # Distribution files
 dist/
 build/
 *.egg-info/
+*.wheel
 
-# Pytest
+# Testing
 .pytest_cache/
 .coverage
+.tox/
+htmlcov/
+.nox/
 
 # Windows specific
 *.exe
 *.dll
+*.msi
+
+# Android specific (buildozer generates these)
+*.keystore
+*.jks
+local.properties
+gradle.properties
 
 # Local configuration files that shouldn't be shared
 local_config.py
 config_local.py
+secrets.py
+.secrets
+
+# Documentation builds
+docs/_build/
+site/
+
+# Jupyter notebooks
+.ipynb_checkpoints/
+
+# PyCharm
+.idea/
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
