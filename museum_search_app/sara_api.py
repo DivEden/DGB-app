@@ -130,22 +130,14 @@ class SaraAPI:
         Returns:
             Liste af objekt ordbøger med detaljer
         """
-        # Prøv først at søge som objektnummer
+        # Søg altid som objektnummer først
         if query.strip():
-            # Check om det ligner et objektnummer format
-            import re
-            object_number_patterns = [
-                r'\d{4}[xX]\d{3,4}',     # 1234x4321
-                r'\d+;\d{2,4}',          # 00073;15
-                r'AAB\s+\d{4}',          # AAB 1234
-                r'^\d{4}$'               # 1234
-            ]
+            # Prøv først objektnummer søgning
+            object_results = self.search_objects_by_number(query, limit)
+            if object_results:
+                return object_results
             
-            for pattern in object_number_patterns:
-                if re.search(pattern, query):
-                    return self.search_objects_by_number(query, limit)
-            
-            # Hvis ikke objektnummer format, søg i alle felter
+            # Hvis ingen resultater som objektnummer, søg i alle felter
             try:
                 params = {
                     'command': 'search',
@@ -937,7 +929,8 @@ class SaraAPI:
             (r'(\d{4}[xX]\d{3,4})', 'traditional'),      # 1234x4321
             (r'(\d+;\d{2,4})', 'genstands'),             # 00073;15
             (r'AAB\s+(\d{4})', 'aab'),                   # AAB 1234
-            (r'^(\d{4})$', 'standalone')                 # 1234 (only if entire string)
+            (r'^(\d{4})$', 'standalone'),                # 1234 (only if entire string)
+            (r'(\d+/\d+[xX]?\d*)', 'slash_format')       # 118/98x4, 123/456, 118/98
         ]
         
         for pattern, format_type in patterns:
