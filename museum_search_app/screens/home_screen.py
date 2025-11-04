@@ -8,6 +8,7 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.label import Label
 from kivy.uix.button import Button
+from kivy.uix.modalview import ModalView
 from kivy.graphics import Color, RoundedRectangle, Rectangle
 from kivy.metrics import dp
 
@@ -34,6 +35,9 @@ class HomeScreen(BoxLayout):
         # Initialize managers
         self.data_manager = DataManager()
         self.sara_api = SaraAPI()
+        
+        # Loading indicator
+        self.loading_popup = None
         
         self._create_layout()
     
@@ -108,6 +112,9 @@ class HomeScreen(BoxLayout):
         
         print("HomeScreen: Starting search, will navigate to results screen")
         
+        # Show loading indicator
+        self._show_loading()
+        
         # Perform search in thread
         def search_thread():
             try:
@@ -116,13 +123,48 @@ class HomeScreen(BoxLayout):
                 from kivy.clock import Clock
                 Clock.schedule_once(lambda dt: self._navigate_to_results(results, query), 0)
             except Exception as e:
+                from kivy.clock import Clock
                 Clock.schedule_once(lambda dt: self._show_search_error(str(e)), 0)
         
         import threading
         threading.Thread(target=search_thread, daemon=True).start()
     
+    def _show_loading(self):
+        """Show loading indicator"""
+        if self.loading_popup:
+            return  # Already showing
+        
+        self.loading_popup = ModalView(
+            size_hint=(None, None),
+            size=(dp(200), dp(100)),
+            auto_dismiss=False,
+            background_color=(0, 0, 0, 0.5)
+        )
+        
+        loading_layout = BoxLayout(orientation='vertical', padding=dp(20), spacing=dp(10))
+        
+        # Add a simple loading message
+        loading_label = Label(
+            text='Søger...',
+            font_size='18sp',
+            color=(1, 1, 1, 1)
+        )
+        loading_layout.add_widget(loading_label)
+        
+        self.loading_popup.add_widget(loading_layout)
+        self.loading_popup.open()
+    
+    def _hide_loading(self):
+        """Hide loading indicator"""
+        if self.loading_popup:
+            self.loading_popup.dismiss()
+            self.loading_popup = None
+    
     def _navigate_to_results(self, results, query):
         """Navigate to results screen with search results"""
+        # Hide loading indicator
+        self._hide_loading()
+        
         print(f"HomeScreen: Got {len(results)} results, navigating to results screen")
         
         try:
@@ -175,6 +217,9 @@ class HomeScreen(BoxLayout):
     
     def _show_search_error(self, error_msg):
         """Show search error message"""
+        # Hide loading indicator
+        self._hide_loading()
+        
         print(f"HomeScreen: Search error: {error_msg}")
         # Could add a popup or other error display here
     

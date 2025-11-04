@@ -57,6 +57,23 @@ class SaraMuseumApp(App):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.title = "DGB Assistent"
+        self._warm_up_connection()
+    
+    def _warm_up_connection(self):
+        """Pre-establish SARA API connection in background"""
+        import threading
+        
+        def warm_up():
+            try:
+                print("App: Warming up SARA API connection...")
+                api = SaraAPI()
+                # Test connection with a simple request
+                api.test_connection()
+                print("App: SARA API connection ready!")
+            except Exception as e:
+                print(f"App: Connection warm-up failed: {e}")
+        
+        threading.Thread(target=warm_up, daemon=True).start()
     
     def build(self):
         main_container = BoxLayout(orientation='vertical')
