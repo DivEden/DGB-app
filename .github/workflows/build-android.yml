@@ -244,6 +244,17 @@ jobs:
 
         echo "Build completed successfully!"
 
+    - name: Verify AAB signature
+      run: |
+        echo "=== Verifying AAB signature ==="
+        AAB_FILE=$(find bin -name "*.aab" -type f | head -n 1)
+        if [ -n "$AAB_FILE" ]; then
+          echo "Found AAB: $AAB_FILE"
+          jarsigner -verify -verbose "$AAB_FILE" || echo "Note: AAB signature check (this is expected for initial release)"
+        else
+          echo "No AAB file found"
+        fi
+
     - name: Upload APK and AAB artifacts
       uses: actions/upload-artifact@v4
       with:

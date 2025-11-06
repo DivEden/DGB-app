@@ -305,6 +305,12 @@ android.release_artifact = aab
 # (str) The format used to package the app for debug mode (apk or aar).
 android.debug_artifact = apk
 
+# Signing configuration - buildozer will prompt for passwords or use debug keystore
+# For production, create a keystore manually and set these:
+# android.keystore = /path/to/your-keystore.jks
+# android.keystore_alias = your-alias
+# Leave commented to use debug keystore initially
+
 # (str) A display cutout is an area on some devices that extends into the display surface.
 # It allows for an edge-to-edge experience while providing space for important sensors on the front of the device.
 # Available options for Android API >= 28 are "default, shortEdges, never" and defaults to never.
