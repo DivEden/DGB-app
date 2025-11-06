@@ -244,16 +244,58 @@ jobs:
 
         echo "Build completed successfully!"
 
-    - name: Verify AAB signature
+    - name: Create and sign AAB with temporary keystore
       run: |
-        echo "=== Verifying AAB signature ==="
+        echo "=== Creating temporary keystore for signing ==="
+        
+        # Create a temporary keystore for signing
+        keytool -genkey -v \
+          -keystore temp-release.jks \
+          -alias release \
+          -keyalg RSA \
+          -keysize 2048 \
+          -validity 10000 \
+          -storepass android \
+          -keypass android \
+          -dname "CN=DGB Assistent, OU=Development, O=Nationalmuseet, L=Copenhagen, ST=Denmark, C=DK"
+        
+        echo "✓ Keystore created"
+        
+        # Find the AAB file
         AAB_FILE=$(find bin -name "*.aab" -type f | head -n 1)
-        if [ -n "$AAB_FILE" ]; then
-          echo "Found AAB: $AAB_FILE"
-          jarsigner -verify -verbose "$AAB_FILE" || echo "Note: AAB signature check (this is expected for initial release)"
-        else
-          echo "No AAB file found"
+        
+        if [ -z "$AAB_FILE" ]; then
+          echo "ERROR: No AAB file found in bin/"
+          ls -la bin/ || echo "bin directory not found"
+          exit 1
         fi
+        
+        echo "Found AAB: $AAB_FILE"
+        
+        # Sign the AAB
+        echo "=== Signing AAB ==="
+        jarsigner -verbose \
+          -sigalg SHA256withRSA \
+          -digestalg SHA-256 \
+          -keystore temp-release.jks \
+          -storepass android \
+          -keypass android \
+          "$AAB_FILE" \
+          release
+        
+        # Verify the signature
+        echo "=== Verifying signature ==="
+        jarsigner -verify -verbose -certs "$AAB_FILE"
+        
+        if [ $? -eq 0 ]; then
+          echo "✅ AAB signed and verified successfully!"
+        else
+          echo "❌ ERROR: AAB signature verification failed"
+          exit 1
+        fi
+        
+        # Clean up keystore (not needed anymore - Google will use their own key)
+        rm -f temp-release.jks
 
     - name: Upload APK and AAB artifacts
       uses: actions/upload-artifact@v4
