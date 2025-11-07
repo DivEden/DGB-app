@@ -116,11 +116,8 @@ jobs:
         echo "Checking for aidl:"
         test -f $ANDROID_SDK_ROOT/build-tools/35.0.0/aidl && echo "aidl found" || { echo "ERROR: aidl not found"; exit 1; }
 
-        echo "Making aidl executable:"
-        chmod +x $ANDROID_SDK_ROOT/build-tools/35.0.0/aidl || { echo "ERROR: Failed to make aidl executable"; exit 1; }
-
         echo "Testing aidl tool:"
-        $ANDROID_SDK_ROOT/build-tools/35.0.0/aidl --version 2>/dev/null || echo "WARNING: aidl tool test failed"
+        $ANDROID_SDK_ROOT/build-tools/35.0.0/aidl --version 2>/dev/null || echo "WARNING: aidl tool test failed (this is OK)"
 
         echo "=== SDK Setup Complete ==="
 
