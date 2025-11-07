@@ -53,8 +53,8 @@ jobs:
       run: |
         echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
         echo "/usr/lib/jvm/java-17-openjdk-amd64/bin" >> $GITHUB_PATH
-        echo "ANDROID_API_LEVEL=31" >> $GITHUB_ENV
-        echo "ANDROID_BUILD_TOOLS_VERSION=31.0.0" >> $GITHUB_ENV
+        echo "ANDROID_API_LEVEL=35" >> $GITHUB_ENV
+        echo "ANDROID_BUILD_TOOLS_VERSION=35.0.0" >> $GITHUB_ENV
 
     - name: Install Python dependencies
       run: |
@@ -65,7 +65,7 @@ jobs:
       uses: android-actions/setup-android@v3
       with:
         cmdline-tools-version: 11076708
-        packages: "platform-tools platforms;android-31 build-tools;31.0.0 ndk;25.2.9519653"
+        packages: "platform-tools platforms;android-35 build-tools;35.0.0 ndk;25.2.9519653"
         accept-android-sdk-licenses: true
 
     - name: Set Android environment variables
@@ -105,8 +105,8 @@ jobs:
         /bin/ls -la $ANDROID_SDK_ROOT/ 2>/dev/null || find $ANDROID_SDK_ROOT -maxdepth 1 -type d 2>/dev/null || { echo "ERROR: SDK directory not accessible"; exit 1; }                                                                                                                                                       
         echo "Build tools directory contents:"
         /bin/ls -la $ANDROID_SDK_ROOT/build-tools/ 2>/dev/null || find $ANDROID_SDK_ROOT/build-tools -maxdepth 1 -type d 2>/dev/null || { echo "ERROR: Build tools directory not found"; exit 1; }                                                                                                                            
-        echo "Build tools 31.0.0 contents:"
-        /bin/ls -la $ANDROID_SDK_ROOT/build-tools/31.0.0/ 2>/dev/null || find $ANDROID_SDK_ROOT/build-tools/31.0.0 -maxdepth 1 -type f 2>/dev/null || { echo "ERROR: Build tools 31.0.0 not found"; exit 1; }                                                                                                                 
+        echo "Build tools 35.0.0 contents:"
+        /bin/ls -la $ANDROID_SDK_ROOT/build-tools/35.0.0/ 2>/dev/null || find $ANDROID_SDK_ROOT/build-tools/35.0.0 -maxdepth 1 -type f 2>/dev/null || { echo "ERROR: Build tools 35.0.0 not found"; exit 1; }                                                                                                                 
         echo "NDK directory contents:"
         /bin/ls -la $ANDROID_SDK_ROOT/ndk/ 2>/dev/null || find $ANDROID_SDK_ROOT/ndk -maxdepth 1 -type d 2>/dev/null || echo "WARNING: NDK directory not found"
         test -d $ANDROID_SDK_ROOT/ndk/25.2.9519653/ && echo "NDK 25.2.9519653 found" || echo "WARNING: NDK 25.2.9519653 not found"
@@ -114,13 +114,13 @@ jobs:
         # Verify critical tools exist
         echo "=== Tool Verification ==="
         echo "Checking for aidl:"
-        test -f $ANDROID_SDK_ROOT/build-tools/31.0.0/aidl && echo "aidl found" || { echo "ERROR: aidl not found"; exit 1; }
+        test -f $ANDROID_SDK_ROOT/build-tools/35.0.0/aidl && echo "aidl found" || { echo "ERROR: aidl not found"; exit 1; }
 
         echo "Making aidl executable:"
-        chmod +x $ANDROID_SDK_ROOT/build-tools/31.0.0/aidl || { echo "ERROR: Failed to make aidl executable"; exit 1; }
+        chmod +x $ANDROID_SDK_ROOT/build-tools/35.0.0/aidl || { echo "ERROR: Failed to make aidl executable"; exit 1; }
 
         echo "Testing aidl tool:"
-        $ANDROID_SDK_ROOT/build-tools/31.0.0/aidl --version 2>/dev/null || echo "WARNING: aidl tool test failed"
+        $ANDROID_SDK_ROOT/build-tools/35.0.0/aidl --version 2>/dev/null || echo "WARNING: aidl tool test failed"
 
         echo "=== SDK Setup Complete ==="
 
