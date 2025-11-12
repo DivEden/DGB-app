@@ -129,37 +129,22 @@ class SavedScreen(BoxLayout):
         count_label.bind(size=count_label.setter('text_size'))
         self.saved_layout.add_widget(count_label)
         
-        # Create grid container with centered layout
+        # Create grid container - full width with padding
         grid_container = BoxLayout(
-            orientation='horizontal',
+            orientation='vertical',
             size_hint_y=None,
-            padding=[dp(10), dp(10), dp(10), dp(10)]
+            padding=[dp(15), dp(10), dp(15), dp(10)]
         )
         grid_container.bind(minimum_height=grid_container.setter('height'))
         
-        # Left spacer for centering
-        grid_container.add_widget(BoxLayout(size_hint_x=0.1))
-        
-        # Center container for grid
-        center_container = BoxLayout(
-            orientation='vertical',
-            size_hint_x=0.8,
-            size_hint_y=None
-        )
-        center_container.bind(minimum_height=center_container.setter('height'))
-        
-        # Create and add grid
+        # Create and add grid directly
         saved_grid = SavedItemGrid(
             saved_items=saved_items,
             remove_callback=self.remove_saved_item,
             view_callback=self.show_item_detail
         )
         
-        center_container.add_widget(saved_grid)
-        grid_container.add_widget(center_container)
-        
-        # Right spacer for centering
-        grid_container.add_widget(BoxLayout(size_hint_x=0.1))
+        grid_container.add_widget(saved_grid)
         
         self.saved_layout.add_widget(grid_container)
     
@@ -238,7 +223,11 @@ class SavedScreen(BoxLayout):
             if detail_screen:
                 print(f"SavedScreen: Found detail screen, showing object")
                 detail_screen.show_object(obj_data)
-                parent.current = 'detail'
+                
+                # Use app navigation to track history
+                from kivy.app import App
+                app = App.get_running_app()
+                app._navigate_to('detail')
             else:
                 print("SavedScreen: Could not find detail screen")
         else:

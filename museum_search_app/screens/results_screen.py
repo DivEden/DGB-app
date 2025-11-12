@@ -199,7 +199,11 @@ class ResultsScreen(Screen):
             if detail_screen:
                 print(f"ResultsScreen: Found detail screen, showing object")
                 detail_screen.show_object(obj_data)
-                parent.current = 'detail'
+                
+                # Use app navigation to track history
+                from kivy.app import App
+                app = App.get_running_app()
+                app._navigate_to('detail')
             else:
                 print("ResultsScreen: Could not find detail screen")
         else:

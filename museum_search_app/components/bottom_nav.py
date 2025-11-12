@@ -1,122 +1,123 @@
 #!/usr/bin/env python3
 """
-Bottom Navigation Bar Component for SARA Museum App
-Mobile-optimized navigation bar with Home and Saved buttons
+Bottom Navigation Bar - Ultra Clean Professional Design
 """
 
 from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.button import Button
+from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.image import Image
 from kivy.uix.label import Label
-from kivy.uix.widget import Widget
-from kivy.graphics import Color, Rectangle, Line
+from kivy.graphics import Color, Rectangle, RoundedRectangle
 from kivy.metrics import dp
 
 
 class BottomNavigation(BoxLayout):
-    """Bottom navigation bar with home and saved buttons"""
+    """Clean professional bottom navigation"""
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.orientation = 'horizontal'
         self.size_hint_y = None
-        # 1.4 cm = 14mm, convert to dp (approximately 53 dp for most phones)
-        self.height = dp(53)
+        self.height = dp(60)
         self.spacing = 0
         self.padding = [0, 0, 0, 0]
         
-        # White background with top border
+        # Background with subtle shadow
         with self.canvas.before:
-            # Top border line
-            Color(0, 0, 0, 1)  # Black line
-            self.border_line = Line(points=[], width=0.5)
+            # Shadow effect
+            Color(0, 0, 0, 0.05)
+            self.shadow = RoundedRectangle(pos=self.pos, size=(self.width, dp(1)), radius=[0])
             
             # White background
-            Color(1, 1, 1, 1)
+            Color(0.99, 0.99, 0.99, 1)  # Off-white
             self.bg_rect = Rectangle(pos=self.pos, size=self.size)
         
-        self.bind(pos=self._update_graphics, size=self._update_graphics)
+        self.bind(pos=self._update_bg, size=self._update_bg)
         
-        # Home button
-        self.home_btn = self._create_nav_button('utils/Images/home.png', 'home')
+        # Buttons - 3 buttons now
+        self.back_btn = self._create_button('utils/Images/back.png', 'Tilbage', 'back', False)
+        self.add_widget(self.back_btn)
+        
+        self.home_btn = self._create_button('utils/Images/home.png', 'Hjem', 'home', True)
         self.add_widget(self.home_btn)
         
-        # Saved button
-        self.saved_btn = self._create_nav_button('utils/Images/bookmark-white.png', 'saved')
+        self.saved_btn = self._create_button('utils/Images/bookmark-white.png', 'Gemte', 'saved', False)
         self.add_widget(self.saved_btn)
     
-    def _create_nav_button(self, icon_path, button_id):
-        """Create a navigation button with icon and label"""
-        # Create a simple button-like container
-        btn_container = BoxLayout(
-            orientation='vertical',
-            padding=[dp(5), dp(5), dp(5), dp(5)],
-            spacing=dp(2)
-        )
-        btn_container.button_id = button_id
+    def _create_button(self, icon_path, text, btn_id, active):
+        """Create modern button with icon and text"""
+        container = BoxLayout(orientation='vertical', padding=[0, dp(8), 0, dp(10)], spacing=dp(4))
+        container.button_id = btn_id
+        container.is_active = active
         
-        # Add spacer to push icon down a bit
-        btn_container.add_widget(Widget(size_hint_y=0.2))
-        
-        # Icon (centered, smaller size)
+        # Icon with tint - high quality settings
         try:
             icon = Image(
                 source=icon_path,
                 size_hint=(None, None),
-                size=(dp(24), dp(24)),  # Smaller icon size
+                size=(dp(24), dp(24)),
+                pos_hint={'center_x': 0.5},
                 allow_stretch=True,
                 keep_ratio=True,
-                mipmap=True  # Better quality scaling
+                mipmap=True,  # Enable mipmapping for better quality
+                color=(0.15, 0.15, 0.15, 1) if active else (0.65, 0.65, 0.65, 1)
             )
-            # Center the icon using a container
-            icon_wrapper = BoxLayout(size_hint_y=0.5)
-            icon_wrapper.add_widget(Widget())  # Left spacer
+            icon_wrapper = BoxLayout(size_hint_y=None, height=dp(24))
+            icon_wrapper.add_widget(BoxLayout())  # Left spacer
             icon_wrapper.add_widget(icon)
-            icon_wrapper.add_widget(Widget())  # Right spacer
-            btn_container.add_widget(icon_wrapper)
-        except Exception as e:
-            print(f"Error loading icon {icon_path}: {e}")
-            # Fallback to emoji
-            label = Label(
-                text='🏠' if 'home' in icon_path else '⭐',
-                font_size='20sp',
-                color=(0.2, 0.2, 0.2, 1),
-                size_hint_y=0.5
-            )
-            btn_container.add_widget(label)
+            icon_wrapper.add_widget(BoxLayout())  # Right spacer
+            container.add_widget(icon_wrapper)
+            container.icon = icon
+        except:
+            # Fallback if icon fails to load
+            pass
         
-        # Label text below icon
-        label_text = 'Hjem' if button_id == 'home' else 'Gemte'
-        text_label = Label(
-            text=label_text,
-            size_hint_y=0.3,
-            font_size='11sp',
-            color=(0.3, 0.3, 0.3, 1),
+        # Label with better rendering
+        label = Label(
+            text=text,
+            size_hint_y=None,
+            height=dp(14),
+            font_size='11sp',  # Slightly larger for crisper text
+            bold=active,
+            color=(0.15, 0.15, 0.15, 1) if active else (0.65, 0.65, 0.65, 1),
             halign='center',
-            valign='top'
+            valign='middle'
         )
-        text_label.bind(size=text_label.setter('text_size'))
-        btn_container.add_widget(text_label)
+        label.texture_update()  # Force texture update for crisp rendering
+        container.add_widget(label)
+        container.label = label
         
-        return btn_container
+        return container
     
-    def _update_graphics(self, *args):
-        """Update background and border line"""
+    def set_active_button(self, button_id):
+        """Switch active button"""
+        for btn in [self.home_btn, self.saved_btn]:
+            active = (btn.button_id == button_id)
+            btn.is_active = active
+            
+            # Update icon color
+            if hasattr(btn, 'icon'):
+                btn.icon.color = (0.15, 0.15, 0.15, 1) if active else (0.65, 0.65, 0.65, 1)
+                btn.icon.reload()  # Reload for crisp rendering
+            
+            # Update label with texture refresh
+            if hasattr(btn, 'label'):
+                btn.label.color = (0.15, 0.15, 0.15, 1) if active else (0.65, 0.65, 0.65, 1)
+                btn.label.bold = active
+                btn.label.texture_update()  # Force sharp text rendering
+    
+    def _update_bg(self, *args):
+        """Update background"""
         self.bg_rect.pos = self.pos
         self.bg_rect.size = self.size
-        
-        # Update top border line
-        self.border_line.points = [
-            self.x, self.top,
-            self.right, self.top
-        ]
+        self.shadow.pos = (self.x, self.top)
+        self.shadow.size = (self.width, dp(1))
     
-    def bind_button_callbacks(self, home_callback=None, saved_callback=None):
-        """Bind callbacks to navigation buttons - bind to touch events"""
+    def bind_button_callbacks(self, back_callback=None, home_callback=None, saved_callback=None):
+        """Bind touch events"""
+        if back_callback:
+            self.back_btn.bind(on_touch_down=lambda i, t: back_callback() if i.collide_point(*t.pos) else None)
         if home_callback:
-            self.home_btn.bind(on_touch_down=lambda instance, touch: 
-                home_callback() if instance.collide_point(*touch.pos) else None)
-        
+            self.home_btn.bind(on_touch_down=lambda i, t: home_callback() if i.collide_point(*t.pos) else None)
         if saved_callback:
-            self.saved_btn.bind(on_touch_down=lambda instance, touch: 
-                saved_callback() if instance.collide_point(*touch.pos) else None)
+            self.saved_btn.bind(on_touch_down=lambda i, t: saved_callback() if i.collide_point(*t.pos) else None)
