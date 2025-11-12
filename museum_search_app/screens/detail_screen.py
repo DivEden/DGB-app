@@ -648,9 +648,9 @@ class DetailScreen(Screen):
             padding=[dp(20), dp(15), dp(20), dp(15)]
         )
         
-        # Check if item is already saved
-        obj_number = self.current_object.get('objectNumber', '')
-        is_saved = self.data_manager.is_item_saved(obj_number)
+        # Check if item is already saved (by priref for unique identification)
+        priref = self.current_object.get('priref', '')
+        is_saved = self.data_manager.is_item_saved_by_priref(priref) if priref else False
         
         # Create save/unsave button
         if is_saved:
@@ -684,6 +684,8 @@ class DetailScreen(Screen):
             from utils.data_manager import DataManager
             self.data_manager = DataManager()
         
+        print(f"DEBUG: Saving object with priref: {self.current_object.get('priref', 'MISSING')}")
+        print(f"DEBUG: Object number: {self.current_object.get('objectNumber', 'MISSING')}")
         self.data_manager.add_to_saved_items(self.current_object)
         print(f"Saved item: {self.current_object.get('title', 'Unknown')}")
         

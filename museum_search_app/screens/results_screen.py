@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """
 Results Screen for SARA Museum App
-Displays search results with back navigation to home
+Displays search results in grid format with back navigation to home
 """
 
 from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.gridlayout import GridLayout
 from kivy.uix.screenmanager import Screen
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.label import Label
@@ -93,10 +94,11 @@ class ResultsScreen(Screen):
         # Results scroll area
         self.results_scroll = ScrollView()
         
-        self.results_layout = BoxLayout(
-            orientation='vertical',
+        # Grid layout for results (3 columns like saved items)
+        self.results_layout = GridLayout(
+            cols=3,
             size_hint_y=None,
-            spacing=dp(15),
+            spacing=dp(10),  # Reduced spacing
             padding=[dp(15), dp(15), dp(15), dp(15)]
         )
         self.results_layout.bind(minimum_height=self.results_layout.setter('height'))
@@ -147,25 +149,14 @@ class ResultsScreen(Screen):
             self.results_layout.add_widget(no_results)
             return
         
-        # Show results count
-        count_label = Label(
-            text=f'Found {len(results)} object(s):',
-            size_hint_y=None,
-            height=dp(40),
-            font_size='16sp',
-            halign='center',
-            color=(0.2, 0.6, 0.2, 1)
-        )
-        count_label.bind(size=count_label.setter('text_size'))
-        self.results_layout.add_widget(count_label)
-        
-        # Display results
+        # Display results (removed count label)
         print(f"DEBUG ResultsScreen: About to create {len(results)} result cards")
         for i, obj in enumerate(results, 1):
             print(f"DEBUG ResultsScreen: Creating ResultCard #{i} for {obj.get('title', 'Unknown')}")
             result_card = ResultCard(
                 obj_data=obj,
-                index=i
+                index=i,
+                click_callback=self.view_detail
             )
             print(f"DEBUG ResultsScreen: ResultCard #{i} created, adding to layout")
             self.results_layout.add_widget(result_card)
@@ -185,5 +176,31 @@ class ResultsScreen(Screen):
         if parent and hasattr(parent, 'current'):
             print("ResultsScreen: Found screen manager, navigating to search")
             parent.current = 'search'  # Changed from 'home' to 'search'
+        else:
+            print("ResultsScreen: Could not find screen manager")
+    
+    def view_detail(self, obj_data):
+        """Navigate to detail screen for selected object"""
+        print(f"ResultsScreen: view_detail called for {obj_data.get('title', 'Unknown')}")
+        
+        # Find the screen manager
+        parent = self.parent
+        while parent and not hasattr(parent, 'current'):
+            parent = parent.parent
+        
+        if parent and hasattr(parent, 'current'):
+            # Get the detail screen and show this object
+            detail_screen = None
+            for screen in parent.screens:
+                if screen.name == 'detail':
+                    detail_screen = screen
+                    break
+            
+            if detail_screen:
+                print(f"ResultsScreen: Found detail screen, showing object")
+                detail_screen.show_object(obj_data)
+                parent.current = 'detail'
+            else:
+                print("ResultsScreen: Could not find detail screen")
         else:
             print("ResultsScreen: Could not find screen manager")

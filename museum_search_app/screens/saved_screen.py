@@ -37,10 +37,6 @@ class SavedScreen(BoxLayout):
         # Initialize data manager
         self.data_manager = DataManager()
         
-        # Track current view mode
-        self.view_mode = 'grid'  # 'grid' or 'detail'
-        self.current_detail_item = None
-        
         self._create_layout()
         self.refresh_saved_items()
     
@@ -55,42 +51,21 @@ class SavedScreen(BoxLayout):
         self.header_layout = BoxLayout(
             orientation='vertical',
             size_hint_y=None,
-            height=dp(120),
+            height=dp(100),
             padding=[dp(20), dp(20), dp(20), dp(10)],
             spacing=dp(10)
         )
         
-        # Title and navigation container
-        title_nav_container = BoxLayout(
-            orientation='horizontal',
-            size_hint_y=None,
-            height=dp(50),
-            spacing=dp(10)
-        )
-        
-        # Back button (initially hidden)
-        self.back_btn = Button(
-            text='← Tilbage',
-            size_hint_x=None,
-            width=dp(100),
-            font_size='14sp',
-            background_color=(0.5, 0.5, 0.5, 1),
-            color=(1, 1, 1, 1),
-            on_press=self.show_grid_view
-        )
-        self.back_btn.opacity = 0  # Hidden initially
-        
         # Title
         self.title = Label(
             text='Gemte objekter',
+            size_hint_y=None,
+            height=dp(50),
             font_size='24sp',
             bold=True,
             color=(0.2, 0.2, 0.2, 1),
             halign='center'
         )
-        
-        title_nav_container.add_widget(self.back_btn)
-        title_nav_container.add_widget(self.title)
         
         # Clear all button
         self.clear_all_btn = Button(
@@ -103,7 +78,7 @@ class SavedScreen(BoxLayout):
             on_press=self.clear_all_saved_items
         )
         
-        self.header_layout.add_widget(title_nav_container)
+        self.header_layout.add_widget(self.title)
         self.header_layout.add_widget(self.clear_all_btn)
         
         # Content container for switching between grid and detail view
@@ -142,60 +117,51 @@ class SavedScreen(BoxLayout):
         
         self.clear_all_btn.disabled = False
         
-        if self.view_mode == 'grid':
-            # Show items count
-            count_label = Label(
-                text=f'{len(saved_items)} gemte objekt(er):',
-                size_hint_y=None,
-                height=dp(40),
-                font_size='16sp',
-                halign='center',
-                color=(0.2, 0.6, 0.2, 1)
-            )
-            count_label.bind(size=count_label.setter('text_size'))
-            self.saved_layout.add_widget(count_label)
-            
-            # Create grid container with centered layout
-            grid_container = BoxLayout(
-                orientation='horizontal',
-                size_hint_y=None,
-                padding=[dp(10), dp(10), dp(10), dp(10)]
-            )
-            grid_container.bind(minimum_height=grid_container.setter('height'))
-            
-            # Left spacer for centering
-            grid_container.add_widget(BoxLayout(size_hint_x=0.1))
-            
-            # Center container for grid
-            center_container = BoxLayout(
-                orientation='vertical',
-                size_hint_x=0.8,
-                size_hint_y=None
-            )
-            center_container.bind(minimum_height=center_container.setter('height'))
-            
-            # Create and add grid
-            saved_grid = SavedItemGrid(
-                saved_items=saved_items,
-                remove_callback=self.remove_saved_item,
-                view_callback=self.show_item_detail
-            )
-            
-            center_container.add_widget(saved_grid)
-            grid_container.add_widget(center_container)
-            
-            # Right spacer for centering
-            grid_container.add_widget(BoxLayout(size_hint_x=0.1))
-            
-            self.saved_layout.add_widget(grid_container)
+        # Show items count
+        count_label = Label(
+            text=f'{len(saved_items)} gemte objekt(er):',
+            size_hint_y=None,
+            height=dp(40),
+            font_size='16sp',
+            halign='center',
+            color=(0.2, 0.6, 0.2, 1)
+        )
+        count_label.bind(size=count_label.setter('text_size'))
+        self.saved_layout.add_widget(count_label)
         
-        elif self.view_mode == 'detail' and self.current_detail_item:
-            # Show single item in detail view
-            detail_card = ResultCard(
-                obj_data=self.current_detail_item,
-                save_callback=None  # No save button in detail view since it's already saved
-            )
-            self.saved_layout.add_widget(detail_card)
+        # Create grid container with centered layout
+        grid_container = BoxLayout(
+            orientation='horizontal',
+            size_hint_y=None,
+            padding=[dp(10), dp(10), dp(10), dp(10)]
+        )
+        grid_container.bind(minimum_height=grid_container.setter('height'))
+        
+        # Left spacer for centering
+        grid_container.add_widget(BoxLayout(size_hint_x=0.1))
+        
+        # Center container for grid
+        center_container = BoxLayout(
+            orientation='vertical',
+            size_hint_x=0.8,
+            size_hint_y=None
+        )
+        center_container.bind(minimum_height=center_container.setter('height'))
+        
+        # Create and add grid
+        saved_grid = SavedItemGrid(
+            saved_items=saved_items,
+            remove_callback=self.remove_saved_item,
+            view_callback=self.show_item_detail
+        )
+        
+        center_container.add_widget(saved_grid)
+        grid_container.add_widget(center_container)
+        
+        # Right spacer for centering
+        grid_container.add_widget(BoxLayout(size_hint_x=0.1))
+        
+        self.saved_layout.add_widget(grid_container)
     
     def _show_empty_state(self):
         """Show message when no saved items"""
@@ -253,25 +219,33 @@ class SavedScreen(BoxLayout):
         print(f"Removed saved item: {obj_data.get('title', 'Unknown')}")
     
     def show_item_detail(self, obj_data):
-        """Show detailed view of a saved item"""
-        self.view_mode = 'detail'
-        self.current_detail_item = obj_data
-        self.title.text = obj_data.get('title', 'Objekt detaljer')
-        self.back_btn.opacity = 1  # Show back button
-        self.clear_all_btn.opacity = 0  # Hide clear all button in detail view
-        self.refresh_saved_items()
-    
-    def show_grid_view(self, instance=None):
-        """Return to grid view"""
-        self.view_mode = 'grid'
-        self.current_detail_item = None
-        self.title.text = 'Gemte objekter'
-        self.back_btn.opacity = 0  # Hide back button
-        self.clear_all_btn.opacity = 1  # Show clear all button
-        self.refresh_saved_items()
+        """Navigate to detail screen for selected saved item"""
+        print(f"SavedScreen: Navigating to detail for {obj_data.get('title', 'Unknown')}")
+        
+        # Find the screen manager
+        parent = self.parent
+        while parent and not hasattr(parent, 'current'):
+            parent = parent.parent
+        
+        if parent and hasattr(parent, 'current'):
+            # Get the detail screen and show this object
+            detail_screen = None
+            for screen in parent.screens:
+                if screen.name == 'detail':
+                    detail_screen = screen
+                    break
+            
+            if detail_screen:
+                print(f"SavedScreen: Found detail screen, showing object")
+                detail_screen.show_object(obj_data)
+                parent.current = 'detail'
+            else:
+                print("SavedScreen: Could not find detail screen")
+        else:
+            print("SavedScreen: Could not find screen manager")
     
     def clear_all_saved_items(self, instance):
         """Clear all saved items"""
         self.data_manager.clear_saved_items()
-        self.show_grid_view()  # Return to grid view after clearing
+        self.refresh_saved_items()
         print("Cleared all saved items")

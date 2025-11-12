@@ -23,6 +23,15 @@ class SaraAPI:
         self.password = "YxUyuzNLubfNKbx2"
         self.auth = HTTPBasicAuth(self.username, self.password)
         
+        # Create persistent session for connection reuse
+        self.session = requests.Session()
+        self.session.auth = self.auth
+        # Pre-warm the connection pool
+        self.session.headers.update({
+            'User-Agent': 'DGB-Assistent/1.0',
+            'Connection': 'keep-alive'
+        })
+        
         # Definér ønskede felter fra SARA API
         self.search_fields = [
             'priref',
@@ -76,10 +85,9 @@ class SaraAPI:
                 'fields': ','.join(self.search_fields)
             }
             
-            response = requests.get(
+            response = self.session.get(
                 self.base_url,
                 params=params,
-                auth=self.auth,
                 timeout=30
             )
             response.raise_for_status()
@@ -148,10 +156,9 @@ class SaraAPI:
                     'fields': ','.join(self.search_fields)
                 }
                 
-                response = requests.get(
+                response = self.session.get(
                     self.base_url,
                     params=params,
-                    auth=self.auth,
                     timeout=30
                 )
                 response.raise_for_status()
@@ -207,10 +214,9 @@ class SaraAPI:
                 'fields': ','.join(self.search_fields)
             }
             
-            response = requests.get(
+            response = self.session.get(
                 self.base_url,
                 params=params,
-                auth=self.auth,
                 timeout=30
             )
             response.raise_for_status()
@@ -836,10 +842,9 @@ class SaraAPI:
                 'fields': ','.join(self.search_fields)
             }
             
-            response = requests.get(
+            response = self.session.get(
                 self.base_url,
                 params=params,
-                auth=self.auth,
                 timeout=30
             )
             response.raise_for_status()
@@ -877,10 +882,9 @@ class SaraAPI:
                 'fields': ','.join(self.search_fields)
             }
             
-            response = requests.get(
+            response = self.session.get(
                 self.base_url,
                 params=params,
-                auth=self.auth,
                 timeout=30
             )
             response.raise_for_status()
@@ -957,10 +961,9 @@ class SaraAPI:
                 'fields': ','.join(self.search_fields)
             }
             
-            response = requests.get(
+            response = self.session.get(
                 self.base_url,
                 params=params,
-                auth=self.auth,
                 timeout=10
             )
             

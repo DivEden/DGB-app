@@ -112,10 +112,11 @@ class DataManager:
     
     def add_to_saved_items(self, obj: Dict[str, Any]):
         """Add object to saved items"""
-        # Remove duplicates based on object number
-        obj_number = obj.get('objectNumber', obj.get('NB', ''))
-        self.saved_items = [item for item in self.saved_items 
-                           if item.get('objectNumber', item.get('NB', '')) != obj_number]
+        # Remove duplicates based on priref (unique ID) instead of object number
+        obj_priref = obj.get('priref', '')
+        if obj_priref:
+            self.saved_items = [item for item in self.saved_items 
+                               if item.get('priref', '') != obj_priref]
         
         # Add complete object data to saved items
         saved_item = dict(obj)  # Copy all data from the original object
@@ -128,9 +129,11 @@ class DataManager:
     
     def remove_from_saved_items(self, obj: Dict[str, Any]):
         """Remove object from saved items"""
-        obj_number = obj.get('objectNumber', obj.get('NB', ''))
-        self.saved_items = [item for item in self.saved_items 
-                           if item.get('objectNumber', item.get('NB', '')) != obj_number]
+        # Remove based on priref (unique ID) instead of object number
+        obj_priref = obj.get('priref', '')
+        if obj_priref:
+            self.saved_items = [item for item in self.saved_items 
+                               if item.get('priref', '') != obj_priref]
         self.save_saved_items()
     
     def get_saved_items(self) -> List[Dict[str, Any]]:
@@ -138,8 +141,13 @@ class DataManager:
         return self.saved_items
     
     def is_item_saved(self, obj_number: str) -> bool:
-        """Check if an item is saved"""
+        """Check if an item is saved by object number (may return True for multiple items with same number)"""
         return any(item.get('objectNumber', '') == obj_number 
+                  for item in self.saved_items)
+    
+    def is_item_saved_by_priref(self, priref: str) -> bool:
+        """Check if a specific item is saved by priref (unique check)"""
+        return any(item.get('priref', '') == priref 
                   for item in self.saved_items)
     
     def clear_saved_items(self):

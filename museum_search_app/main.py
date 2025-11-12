@@ -3,6 +3,7 @@ from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.metrics import dp
+from kivy.clock import Clock
 from screens.home_screen import HomeScreen
 from screens.results_screen import ResultsScreen  
 from screens.detail_screen import DetailScreen
@@ -12,12 +13,13 @@ from utils.data_manager import DataManager
 from sara_api import SaraAPI
 
 class SearchScreen(Screen):
-    def __init__(self, **kwargs):
+    def __init__(self, sara_api=None, **kwargs):
         super().__init__(**kwargs)
         self.name = "search"
         self.data_manager = DataManager()
-        self.sara_api = SaraAPI()
+        self.sara_api = sara_api if sara_api else SaraAPI()
         self.home_screen = HomeScreen()
+        self.home_screen.sara_api = self.sara_api  # Share the API instance
         self.home_screen.search_bar.set_search_callback(self.perform_search)
         if hasattr(self.home_screen, 'carousel'):
             def search_recent_wrapper(search_item):
@@ -57,6 +59,8 @@ class SaraMuseumApp(App):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.title = "DGB Assistent"
+        self.sara_api = SaraAPI()  # Create shared instance
+        self.connection_ready = False
         self._warm_up_connection()
     
     def _warm_up_connection(self):
@@ -66,19 +70,42 @@ class SaraMuseumApp(App):
         def warm_up():
             try:
                 print("App: Warming up SARA API connection...")
-                api = SaraAPI()
-                # Test connection with a simple request
-                api.test_connection()
+                # Use the shared instance
+                self.sara_api.test_connection()
+                self.connection_ready = True
                 print("App: SARA API connection ready!")
+                # Hide connection status on UI thread
+                Clock.schedule_once(lambda dt: self._hide_connection_status(), 0)
             except Exception as e:
                 print(f"App: Connection warm-up failed: {e}")
+                self.connection_ready = False
+                Clock.schedule_once(lambda dt: self._show_connection_error(), 0)
         
         threading.Thread(target=warm_up, daemon=True).start()
+    
+    def _show_connection_status(self):
+        """Show connection status indicator"""
+        if hasattr(self, 'home_screen'):
+            self.home_screen._show_connection_status()
+    
+    def _hide_connection_status(self):
+        """Hide connection status indicator"""
+        if hasattr(self, 'home_screen'):
+            self.home_screen._hide_connection_status()
+    
+    def _show_connection_error(self):
+        """Show connection error"""
+        if hasattr(self, 'home_screen'):
+            self.home_screen._show_connection_error()
     
     def build(self):
         main_container = BoxLayout(orientation='vertical')
         self.screen_manager = ScreenManager()
-        self.screen_manager.add_widget(SearchScreen())
+        
+        # Pass the shared sara_api instance to SearchScreen
+        search_screen = SearchScreen(sara_api=self.sara_api)
+        self.home_screen = search_screen.home_screen  # Get reference to home_screen
+        self.screen_manager.add_widget(search_screen)
         self.screen_manager.add_widget(ResultsScreen())
         self.screen_manager.add_widget(DetailScreen())
         saved_screen_wrapper = Screen(name='saved')

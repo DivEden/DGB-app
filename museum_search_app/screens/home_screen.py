@@ -11,6 +11,7 @@ from kivy.uix.button import Button
 from kivy.uix.modalview import ModalView
 from kivy.graphics import Color, RoundedRectangle, Rectangle
 from kivy.metrics import dp
+from kivy.clock import Clock
 
 from components.search_bar import SearchBar
 from components.carousel import RecentSearchesCarousel
@@ -38,8 +39,12 @@ class HomeScreen(BoxLayout):
         
         # Loading indicator
         self.loading_popup = None
+        self.connection_status_popup = None
         
         self._create_layout()
+        
+        # Show initial connection status
+        self._show_connection_status()
     
     def _update_bg(self, *args):
         """Update background position and size"""
@@ -247,3 +252,65 @@ class HomeScreen(BoxLayout):
         """Update the recent searches carousel"""
         recent_searches = self.data_manager.get_recent_searches()
         self.carousel.update_carousel(recent_searches)
+    def _show_connection_status(self):
+        """Show 'Connecting to SARA...' status"""
+        if self.connection_status_popup:
+            return  # Already showing
+        
+        self.connection_status_popup = ModalView(
+            size_hint=(None, None),
+            size=(dp(250), dp(100)),
+            auto_dismiss=False,
+            background_color=(0, 0, 0, 0.7)
+        )
+        
+        status_layout = BoxLayout(orientation='vertical', padding=dp(20), spacing=dp(10))
+        
+        status_label = Label(
+            text='Forbinder til SARA...',
+            font_size='18sp',
+            color=(1, 1, 1, 1)
+        )
+        status_layout.add_widget(status_label)
+        
+        self.connection_status_popup.add_widget(status_layout)
+        self.connection_status_popup.open()
+    
+    def _hide_connection_status(self):
+        """Hide connection status indicator"""
+        if self.connection_status_popup:
+            self.connection_status_popup.dismiss()
+            self.connection_status_popup = None
+    
+    def _show_connection_error(self):
+        """Show connection error message"""
+        self._hide_connection_status()
+        
+        error_popup = ModalView(
+            size_hint=(None, None),
+            size=(dp(300), dp(150)),
+            auto_dismiss=True,
+            background_color=(0, 0, 0, 0.7)
+        )
+        
+        error_layout = BoxLayout(orientation='vertical', padding=dp(20), spacing=dp(10))
+        
+        error_label = Label(
+            text='Kunne ikke forbinde til SARA.\nTjek din internetforbindelse.',
+            font_size='16sp',
+            color=(1, 0.3, 0.3, 1),
+            halign='center'
+        )
+        error_label.bind(size=error_label.setter('text_size'))
+        error_layout.add_widget(error_label)
+        
+        close_btn = Button(
+            text='OK',
+            size_hint_y=None,
+            height=dp(40)
+        )
+        close_btn.bind(on_press=error_popup.dismiss)
+        error_layout.add_widget(close_btn)
+        
+        error_popup.add_widget(error_layout)
+        error_popup.open()

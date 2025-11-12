@@ -21,7 +21,7 @@ class SavedItemGrid(GridLayout):
     def __init__(self, saved_items=None, remove_callback=None, view_callback=None, **kwargs):
         super().__init__(**kwargs)
         self.cols = 3  # Three columns
-        self.spacing = dp(20)  # Match carousel spacing
+        self.spacing = dp(10)  # Reduced spacing
         self.size_hint_y = None
         self.bind(minimum_height=self.setter('height'))
         
@@ -60,10 +60,10 @@ class SavedGridItem(BoxLayout):
         self.orientation = 'vertical'
         self.size_hint_y = None
         self.size_hint_x = None
-        self.width = dp(200)  # Same as carousel cards
-        self.height = dp(220)  # 150 image + 70 text
+        self.width = dp(100)  # Reduced to fit 3 per row on phone
+        self.height = dp(140)  # 90 image + 50 text
         self.spacing = dp(0)
-        self.padding = [dp(2), dp(2), dp(2), 0]  # Match carousel padding
+        self.padding = [dp(2), dp(2), dp(2), 0]
         
         self.obj_data = obj_data or {}
         self.remove_callback = remove_callback
@@ -74,7 +74,7 @@ class SavedGridItem(BoxLayout):
         self.card_container = BoxLayout(
             orientation='vertical',
             size_hint_y=None,
-            height=dp(220),
+            height=dp(140),
             spacing=dp(0)
         )
         
@@ -106,11 +106,11 @@ class SavedGridItem(BoxLayout):
         self._create_text_section()
     
     def _create_image_section(self):
-        """Create image section same as carousel - 200x150dp with button overlay"""
+        """Create image section - 100x90dp with button overlay"""
         # Use FloatLayout to overlay button on image
         image_container = FloatLayout(
             size_hint_y=None,
-            height=dp(150)
+            height=dp(90)
         )
         
         # Image section background
@@ -233,44 +233,44 @@ class SavedGridItem(BoxLayout):
             instance.circle_bg.size = instance.size
     
     def _create_text_section(self):
-        """Create text section same as carousel"""
+        """Create text section - smaller for compact grid"""
         text_section = BoxLayout(
             orientation='vertical',
             size_hint_y=None,
             size_hint_x=1,
-            height=dp(70),  # Same as carousel
-            padding=[dp(10), dp(10), dp(10), dp(10)],
-            spacing=dp(4)
+            height=dp(50),  # Reduced height
+            padding=[dp(5), dp(5), dp(5), dp(5)],
+            spacing=dp(2)
         )
         
-        # Title - same style as carousel
+        # Title - smaller font
         title_text = self.obj_data.get('title', 'No title')
-        if len(title_text) > 30:
-            title_text = title_text[:27] + '...'
+        if len(title_text) > 20:
+            title_text = title_text[:17] + '...'
         
         title_label = Label(
             text=title_text,
-            font_size='15sp',
+            font_size='12sp',  # Smaller font
             bold=True,
             color=(0.2, 0.2, 0.2, 1),
             halign='center',
             valign='top',
-            text_size=(dp(180), None),
+            text_size=(dp(90), None),
             shorten=True,
             shorten_from='right',
             max_lines=1
         )
         
-        # Subtitle (object number) - same style as carousel
+        # Subtitle (object number) - smaller font
         objektnummer = self.obj_data.get('objectNumber', '')
         if objektnummer:
             subtitle_label = Label(
                 text=objektnummer,
-                font_size='12sp',
-                color=(0.46, 0.46, 0.46, 1),  # #757575
+                font_size='10sp',  # Smaller font
+                color=(0.46, 0.46, 0.46, 1),
                 halign='center',
                 valign='top',
-                text_size=(dp(180), None)
+                text_size=(dp(90), None)
             )
             text_section.add_widget(title_label)
             text_section.add_widget(subtitle_label)
