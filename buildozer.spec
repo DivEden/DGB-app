@@ -4,10 +4,10 @@
 title = DGB Assistent
 
 # (str) Package name
-package.name = dgbassistent
+package.name = dgbapp
 
 # (str) Package domain (needed for android/ios packaging)
-package.domain = dk.natmus
+package.domain = dk.dengamleby
 
 # (str) Source code where the main.py live
 source.dir = museum_search_app
