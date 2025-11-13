@@ -305,11 +305,17 @@ android.release_artifact = aab
 # (str) The format used to package the app for debug mode (apk or aar).
 android.debug_artifact = apk
 
-# Signing configuration - buildozer will prompt for passwords or use debug keystore
-# For production, create a keystore manually and set these:
-# android.keystore = /path/to/your-keystore.jks
-# android.keystore_alias = your-alias
-# Leave commented to use debug keystore initially
+# Signing configuration for Google Play App Signing
+# When using Google Play App Signing, you can either:
+# 1) Leave these commented to use a debug keystore for initial upload (Google will re-sign)
+# 2) Or specify a dedicated upload keystore:
+# android.keystore = dgb-upload-keystore.jks
+# android.keystore_alias = dgb-upload
+# 
+# IMPORTANT: Once you upload your first release, keep the same keystore for all future updates!
+# Store the keystore file securely and NEVER commit it to git (.gitignore below)
+# 
+# For this initial release with Google Play App Signing, leave commented:
 
 # (str) A display cutout is an area on some devices that extends into the display surface.
 # It allows for an edge-to-edge experience while providing space for important sensors on the front of the device.
